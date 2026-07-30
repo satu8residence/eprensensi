@@ -107,7 +107,7 @@
 
                                                 @if ($d->status == 0)
                                                     <span class="badge bg-warning">
-                                                        <ion-icon name="refresh-outline"></ion-icon>
+                                                        Pending
                                                     </span>
                                                 @elseif($d->status == 1)
                                                     <span class="badge bg-success">
@@ -158,7 +158,7 @@
 
                                                 @if ($d->status == 0)
                                                     <span class="badge bg-warning">
-                                                        <ion-icon name="refresh-outline"></ion-icon>
+                                                        Pending
                                                     </span>
                                                 @elseif($d->status == 1)
                                                     <span class="badge bg-success">
@@ -205,7 +205,7 @@
 
                                                 @if ($d->status == 0)
                                                     <span class="badge bg-warning">
-                                                        <ion-icon name="refresh-outline"></ion-icon>
+                                                        Pending
                                                     </span>
                                                 @elseif($d->status == 1)
                                                     <span class="badge bg-success">
@@ -257,7 +257,7 @@
 
                                                 @if ($d->status_approved == 0)
                                                     <span class="badge bg-warning">
-                                                        <ion-icon name="refresh-outline"></ion-icon>
+                                                        Pending
                                                     </span>
                                                 @elseif($d->status_approved == 1)
                                                     <span class="badge bg-success">
@@ -309,7 +309,7 @@
 
                                                 @if ($d->status == 0)
                                                     <span class="badge bg-warning">
-                                                        <ion-icon name="refresh-outline"></ion-icon>
+                                                        Pending
                                                     </span>
                                                 @elseif($d->status == 1)
                                                     <span class="badge bg-success">
@@ -333,6 +333,13 @@
                     @endforeach
                 </div>
                 <div id="cuti" class="content" style="display: none;">
+                    <div class="card mb-2" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; border-radius: 10px;">
+                        <div class="card-body text-center" style="padding: 15px !important;">
+                            <h4 style="color: white; margin-bottom: 5px; font-weight: normal; font-size: 14px;">Sisa Cuti Tahunan Anda</h4>
+                            <h2 style="color: white; font-weight: bold; margin: 0; font-size: 28px;">{{ $sisa_cuti }} Hari</h2>
+                            <small style="opacity: 0.8; font-size: 11px;">Jatah Cuti: {{ $jatah_cuti }} hari | Terpakai: {{ $cuti_terpakai }} hari</small>
+                        </div>
+                    </div>
                     @foreach ($izincuti as $d)
                         <div class="row mb-1">
                             <div class="col">
@@ -360,7 +367,7 @@
 
                                                 @if ($d->status == 0)
                                                     <span class="badge bg-warning">
-                                                        <ion-icon name="refresh-outline"></ion-icon>
+                                                        Pending
                                                     </span>
                                                 @elseif($d->status == 1)
                                                     <span class="badge bg-success">
@@ -391,22 +398,22 @@
             <ion-icon name="add-outline" role="img" class="md hydrated" aria-label="add outline"></ion-icon>
         </a>
         <div class="dropdown-menu">
-            {{-- <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinterlambat">
+            <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinterlambat">
                 <ion-icon name="document-outline" role="img" class="md hydrated" aria-label="musical notes outline"></ion-icon>
                 <p>Izin Terlambat</p>
-            </a> --}}
+            </a>
             <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinabsen">
                 <ion-icon name="document-outline" role="img" class="md hydrated" aria-label="image outline"></ion-icon>
                 <p>Izin Absen</p>
             </a>
-            {{-- <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinkeluar">
+            <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinkeluar">
                 <ion-icon name="document-outline" role="img" class="md hydrated" aria-label="videocam outline"></ion-icon>
                 <p>Izin Keluar Kantor</p>
-            </a> --}}
-            {{-- <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinpulang">
+            </a>
+            <a class="dropdown-item bg-danger" href="/pengajuanizin/createizinpulang">
                 <ion-icon name="document-outline" role="img" class="md hydrated" aria-label="videocam outline"></ion-icon>
                 <p>Izin Pulang</p>
-            </a> --}}
+            </a>
             <a class="dropdown-item bg-danger" href="/pengajuanizin/createsakit">
                 <ion-icon name="document-outline" role="img" class="md hydrated" aria-label="videocam outline"></ion-icon>
                 <p>Sakit</p>

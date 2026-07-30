@@ -12,7 +12,7 @@ class Karyawan extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $table = "hrd_karyawan";
+    protected $table = "karyawan";
     protected $primaryKey = "nik";
     protected $guarded = [];
     public $incrementing = false;
@@ -29,15 +29,16 @@ class Karyawan extends Authenticatable
     function getKaryawan($nik)
     {
         $query = Karyawan::where('nik', $nik)
-            ->select('hrd_karyawan.*', 'nama_jabatan', 'hrd_jabatan.kategori', 'nama_dept', 'nama_cabang', 'kode_regional')
-            ->join('cabang', 'hrd_karyawan.kode_cabang', '=', 'cabang.kode_cabang')
-            ->join('hrd_departemen', 'hrd_karyawan.kode_dept', '=', 'hrd_departemen.kode_dept')
-            ->join('hrd_jabatan', 'hrd_karyawan.kode_jabatan', '=', 'hrd_jabatan.kode_jabatan')
-            ->join('hrd_klasifikasi', 'hrd_karyawan.kode_klasifikasi', '=', 'hrd_klasifikasi.kode_klasifikasi')
-            ->join('hrd_status_kawin', 'hrd_karyawan.kode_status_kawin', '=', 'hrd_karyawan.kode_status_kawin')
-            ->join('hrd_group', 'hrd_karyawan.kode_group', '=', 'hrd_group.kode_group')
+            ->select('karyawan.*', 'karyawan.jabatan as nama_jabatan', 'nama_dept', 'nama_cabang')
+            ->leftJoin('cabang', 'karyawan.kode_cabang', '=', 'cabang.kode_cabang')
+            ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
             ->first();
 
         return $query;
+    }
+
+    public function getNamaKaryawanAttribute()
+    {
+        return $this->nama_lengkap;
     }
 }

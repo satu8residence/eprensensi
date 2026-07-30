@@ -95,6 +95,7 @@
                                             <th>Foto</th>
                                             <th>Departemen</th>
                                             <th>Cabang</th>
+                                            <th>Jadwal Shift</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
@@ -117,20 +118,40 @@
                                                 @endif
 
                                             </td>
-                                            <td>{{ $d->nama_dept }}</td>
-                                            <td>{{ $d->kode_cabang }}</td>
-                                            <td>
+                                             <td>{{ $d->nama_dept }}</td>
+                                             <td>{{ $d->kode_cabang }}</td>
+                                             <td>{{ $d->nama_jadwal ?? 'Belum Set' }}</td>
+                                             <td>
                                                 <div class="btn-group">
-                                                    <a href="#" class="edit btn btn-info btn-sm" nik="{{ $d->nik }}">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                    <a href="#" class="setjamkerja btn btn-warning btn-sm me-1" title="Set Jam Kerja" nik="{{ $d->nik }}">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-time" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                                            <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path>
-                                                            <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path>
-                                                            <path d="M16 5l3 3"></path>
+                                                            <path d="M11.795 21h-6.795a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v4"></path>
+                                                            <path d="M18 18m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path>
+                                                            <path d="M15 3v4"></path>
+                                                            <path d="M7 3v4"></path>
+                                                            <path d="M3 11h16"></path>
+                                                            <path d="M18 16.496v1.504l1 1"></path>
                                                         </svg>
                                                     </a>
-                                                    <form action="/karyawan/{{ $d->nik }}/delete" method="POST" style="margin-left:5px">
-                                                        @csrf
+                                                     <a href="#" class="edit btn btn-info btn-sm me-1" title="Edit Karyawan" nik="{{ $d->nik }}">
+                                                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-edit" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                             <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"></path>
+                                                             <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"></path>
+                                                             <path d="M16 5l3 3"></path>
+                                                         </svg>
+                                                     </a>
+                                                     <a href="#" class="resetpassword btn btn-warning btn-sm me-1" title="Reset Password" nik="{{ $d->nik }}" nama="{{ $d->nama_lengkap }}">
+                                                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-key" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                             <path d="M16.555 3.84a4 4 0 1 0 3.6 5.82a4.015 4.015 0 0 0 -3.6 -5.82z"></path>
+                                                             <path d="M11.5 11.5l-6.5 6.5v3h3l1.5 -1.5v-1.5h1.5v-1.5h1.5l1.5 -1.5"></path>
+                                                             <path d="M15 9h.01"></path>
+                                                         </svg>
+                                                     </a>
+                                                     <form action="/karyawan/{{ $d->nik }}/delete" method="POST">
+                                                         @csrf
                                                         <a class="btn btn-danger btn-sm delete-confirm">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash-filled" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                                 <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
@@ -236,6 +257,20 @@
                             </div>
                         </div>
                     </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="input-icon mb-3">
+                                <span class="input-icon-addon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"></path>
+                                        <path d="M12 11v-4a3 3 0 0 1 6 0v4"></path>
+                                    </svg>
+                                </span>
+                                <input type="password" id="password" class="form-control" name="password" placeholder="Password Baru (Kosongkan untuk default: 12345)">
+                            </div>
+                        </div>
+                    </div>
                     <div class="row mt-2">
                         <div class="col-12">
                             <input type="file" name="foto" class="form-control">
@@ -257,6 +292,16 @@
                                 <option value="">Cabang</option>
                                 @foreach ($cabang as $d)
                                 <option value="{{ $d->kode_cabang }}">{{ strtoupper($d->nama_cabang) }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <select name="kode_jadwal" id="kode_jadwal" class="form-select">
+                                <option value="">Jadwal Shift</option>
+                                @foreach ($jadwal_kerja as $j)
+                                <option value="{{ $j->kode_jadwal }}">{{ $j->nama_jadwal }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -296,6 +341,22 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Set Jam Kerja --}}
+<div class="modal modal-blur fade" id="modal-setjamkerja" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Set Jam Kerja Karyawan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="loadsetjamkerjaform">
+
+            </div>
+
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('myscript')
@@ -322,6 +383,23 @@
             $("#modal-editkaryawan").modal("show");
         });
 
+        $(document).on('click', '.setjamkerja', function(e) {
+            e.preventDefault();
+            var nik = $(this).attr('nik');
+            $.ajax({
+                type: 'POST',
+                url: '/karyawan/' + nik + '/setjamkerja',
+                cache: false,
+                data: {
+                    _token: "{{ csrf_token() }}"
+                },
+                success: function(respond) {
+                    $("#loadsetjamkerjaform").html(respond);
+                    $("#modal-setjamkerja").modal("show");
+                }
+            });
+        });
+
         $(".delete-confirm").click(function(e) {
             var form = $(this).closest('form');
             e.preventDefault();
@@ -341,6 +419,40 @@
                         , 'Data Berhasil Di Hapus'
                         , 'success'
                     )
+                }
+            })
+        });
+
+        $(".resetpassword").click(function(e) {
+            e.preventDefault();
+            var nik = $(this).attr('nik');
+            var nama = $(this).attr('nama');
+            
+            Swal.fire({
+                title: 'Apakah Anda Yakin?'
+                , text: "Password karyawan " + nama + " (" + nik + ") akan di-reset menjadi '12345'!"
+                , icon: 'warning'
+                , showCancelButton: true
+                , confirmButtonColor: '#3085d6'
+                , cancelButtonColor: '#d33'
+                , confirmButtonText: 'Ya, Reset!'
+                , cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    var form = $('<form>', {
+                        'method': 'POST',
+                        'action': '/karyawan/' + nik + '/resetpassword'
+                    });
+                    
+                    var token = $('<input>', {
+                        'type': 'hidden',
+                        'name': '_token',
+                        'value': '{{ csrf_token() }}'
+                    });
+                    
+                    form.append(token);
+                    $('body').append(form);
+                    form.submit();
                 }
             })
         });

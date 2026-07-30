@@ -122,11 +122,7 @@ class PresensiController extends Controller
         $nik = Auth::guard('karyawan')->user()->nik;
 
         //Cek Apakah Sedang Perjalanan Dinas Ke Cabang lain
-        $cekperjalanandinas = DB::table('hrd_izindinas')
-            ->whereRaw('"' . $hariini . '" >= dari')
-            ->whereRaw('"' . $hariini . '" <= sampai')
-            ->where('nik', $nik)
-            ->first();
+        $cekperjalanandinas = null;
 
 
         if ($cekperjalanandinas != null) {
@@ -137,20 +133,29 @@ class PresensiController extends Controller
 
         //Cek Lokasi Cabang
         $lok_kantor = DB::table('cabang')->where('kode_cabang', $kode_cabang)->first();
+        if ($lok_kantor == null) {
+            $pusat = DB::table('konfigurasi_lokasi')->where('id', 1)->first();
+            $lok_kantor = (object)[
+                'kode_cabang' => 'PST',
+                'nama_cabang' => 'Kantor Pusat',
+                'lokasi_cabang' => $pusat ? $pusat->lokasi_kantor : '-6.306488,106.666570',
+                'radius_cabang' => $pusat ? $pusat->radius : 100
+            ];
+        }
 
         // Cek Apakah Sudah Absen
-        $cek = DB::table('hrd_presensi')->where('tanggal', $hariini)->where('nik', $nik)->count();
+        $cek = DB::table('presensi')->where('tgl_presensi', $hariini)->where('nik', $nik)->count();
 
         //Cek Apakah Memiliki Jadwal Shift
-        $cekjadwalshift = DB::table('hrd_jadwalshift_detail')
-            ->join('hrd_jadwalshift', 'hrd_jadwalshift_detail.kode_jadwalshift', '=', 'hrd_jadwalshift.kode_jadwalshift')
+        $cekjadwalshift = DB::table('konfigurasi_jadwalkerja_detail')
+            ->join('konfigurasi_jadwalkerja', 'konfigurasi_jadwalkerja_detail.kode_setjadwal', '=', 'konfigurasi_jadwalkerja.kode_setjadwal')
             ->whereRaw('"' . $hariini . '" >= dari')
             ->whereRaw('"' . $hariini . '" <= sampai')
             ->where('nik', $nik)
             ->first();
 
         //Cek Apakah Ada Pergantian Shift
-        $cekgantishift = DB::table('hrd_gantishift')->where('tanggal', $hariini)->where('nik', $nik)->first();
+        $cekgantishift = null;
 
         //Jika Ada Pergantian Shift
         if ($cekgantishift != null) {
@@ -162,142 +167,42 @@ class PresensiController extends Controller
             //Jika Sedang Perjalanan Dinas
         } else if ($cekperjalanandinas != null) {
             //Sesuaikan dengan Jadwal Cabang Tujuan
-            $cekjadwaldinas = DB::table('hrd_jadwalkerja')
+            $cekjadwaldinas = DB::table('jadwal_kerja')
                 ->where('nama_jadwal', 'NON SHIFT')
                 ->where('kode_cabang', $cekperjalanandinas->kode_cabang)->first();
             $kode_jadwal = $cekjadwaldinas->kode_jadwal;
         } else {
 
-            //Gunakan Jadwal Default
-            $kode_jadwal = Auth::guard('karyawan')->user()->kode_jadwal;
+            //Gunakan Jadwal Default atau Fallback ke JD01 (Jadwal Standar)
+            $kode_jadwal = Auth::guard('karyawan')->user()->kode_jadwal ?? 'JD01';
         }
 
         //Tanggal 5 Jam Ketika Besok Libur
-        $libur = DB::table('hrd_harilibur_detail')
-            ->leftJoin('hrd_harilibur', 'hrd_harilibur_detail.kode_libur', '=', 'hrd_harilibur.kode_libur')
-            ->where('nik', $nik)
-            ->where('kode_cabang', $kode_cabang)
-            ->where('tanggal_limajam', $hariini);
-
-        $ceklibur = $libur->count();
-        $datalibur = $libur->first();
-        $tanggal_libur = $datalibur != null ? $datalibur->tanggal : '';
+        $libur = null;
+        $datalibur = null;
+        $tanggal_libur = '';
 
         //Cek Libur Hari ini
-        $cekliburhariini = DB::table('hrd_harilibur_detail')
-            ->leftJoin('hrd_harilibur', 'hrd_harilibur_detail.kode_libur', '=', 'hrd_harilibur.kode_libur')
-            ->where('nik', $nik)
-            ->where('kode_cabang', $kode_cabang)
-            ->where('tanggal', $hariini)
-            ->where('kategori', 1)
-            ->first();
+        $cekliburhariini = null;
 
         // Cek Wfh Hari Ini
-        $cekwfhhariini = DB::table('hrd_harilibur_detail')
-            ->leftJoin('hrd_harilibur', 'hrd_harilibur_detail.kode_libur', '=', 'hrd_harilibur.kode_libur')
-            ->where('nik', $nik)
-            ->where('kode_cabang', $kode_cabang)
-            ->where('tanggal', $hariini)
-            ->where('kategori', 3)
-            ->first();
+        $cekwfhhariini = null;
 
         //Cek Libur Pengganti Hari Minggu
-        $cekliburpenggantiminggu = DB::table('hrd_harilibur_detail')
-            ->leftJoin('hrd_harilibur', 'hrd_harilibur_detail.kode_libur', '=', 'hrd_harilibur.kode_libur')
-            ->where('nik', $nik)
-            ->where('kode_cabang', $kode_cabang)
-            ->where('tanggal', $hariini)
-            ->where('kategori', 2)
-            ->first();
+        $cekliburpenggantiminggu = null;
 
         //Cek Hari Minggu Masuk
-        if ($this->hari_tanggal(date('Y-m-d')) == "Minggu") {
-            $cekminggumasuk = DB::table('hrd_harilibur_detail') // Mengganti 'harilibur_karyawan' dengan 'hrd_harilibur_karyawan'
-                ->leftJoin('hrd_harilibur', 'hrd_harilibur_detail.kode_libur', '=', 'hrd_harilibur.kode_libur')
-                ->where('nik', $nik)
-                ->where('kode_cabang', $kode_cabang)
-                ->where('tanggal_diganti', $hariini)
-                ->where('kategori', 2)
-                ->first();
-        } else {
-            $cekminggumasuk = null;
-        }
+        $cekminggumasuk = null;
 
-        //Cek Lembur
-        $ceklembur = DB::table('hrd_lembur_detail')
-            ->join('hrd_lembur', 'hrd_lembur_detail.kode_lembur', '=', 'hrd_lembur.kode_lembur')
-            ->where('nik', $nik)
-            ->where('tanggal', $hariini)->count();
-
-
-
-
-        //dd($ceklibur);
-        if ($ceklibur > 0) {
-            $hariini = "Sabtu";
-        } elseif ($cekminggumasuk != null) {
-            $hariini = $this->hari_tanggal($cekminggumasuk->tanggal);
-        } else {
-            $hariini = $this->hari_ini();
-        }
-
-        if ($hariini == "Sabtu" && $ceklembur > 0) {
-            $hariini = "Jumat";
-        }
-
-
-        $kode_jabatan = Auth::user()->kode_jabatan;
-        $jabatan = DB::table('hrd_jabatan')->where('kode_jabatan', $kode_jabatan)->first();
-
-
-        $nik_normal = [
-            "17.07.302",
-            "10.01.114",
-            "17.07.280",
-            "12.02.061",
-            "12.11.094",
-            "23.02.214",
-            "11.11.146",
-            "16.03.089",
-            "97.01.026",
-            "18.01.256",
-            "20.04.110",
-            "23.11.277",
-            "24.01.035",
-            "08.07.092"
-        ];
-
-        // Tanggal 25102024
-        if (date('Y-m-d') == '2024-10-25' && $kode_cabang == 'PST' && !in_array($nik, $nik_normal)) {
-            $hariini = "Sabtu";
-        }
-
-        //Jika Jabatan Security
-        if ($jabatan->nama_jabatan == "SECURITY" && $hariini == "Sabtu") {
-            $hariini = "Senin";
-        }
-
-
-
-        // $id_group = Auth::guard('karyawan')->user()->grup;
-        // $group_saus =  [29, 26, 27];
-        // if (date('Y-m-d') == '2024-02-10') {
-        //     if (in_array($id_group, $group_saus)) {
-        //         $hariini = "Senin";
-        //     }
-        // }
-
-        $jadwal = DB::table('hrd_jadwalkerja_detail')
-            ->join('hrd_jadwalkerja', 'hrd_jadwalkerja_detail.kode_jadwal', '=', 'hrd_jadwalkerja.kode_jadwal')
-            ->where('hari', $hariini)->where('hrd_jadwalkerja_detail.kode_jadwal', $kode_jadwal)->first();
-
+        $hariini_nama = $this->hari_ini();
+        $jadwal = $this->getJamKerjaKaryawan($nik, $hariini, $hariini_nama);
 
         //Jika Belum Memiliki Jadwal
         if ($jadwal == null && empty($cekminggumasuk)) {
             return view('presensi.notifjadwal');
         }
 
-        $jam_kerja = DB::table('hrd_jamkerja')->where('kode_jam_kerja', $jadwal->kode_jam_kerja)->first();
+        $jam_kerja = DB::table('jam_kerja')->where('kode_jam_kerja', $jadwal->kode_jam_kerja)->first();
 
         $kode_dept =  Auth::guard('karyawan')->user()->kode_dept;
         $kode_cabang =  Auth::guard('karyawan')->user()->kode_cabang;
@@ -330,11 +235,7 @@ class PresensiController extends Controller
         $lock_location = Auth::guard('karyawan')->user()->lock_location;
         $tgl_presensi = date("Y-m-d");
 
-        $cekperjalanandinas = DB::table('hrd_izindinas')
-            ->whereRaw('"' . $tgl_presensi . '" >= dari')
-            ->whereRaw('"' . $tgl_presensi . '" <= sampai')
-            ->where('nik', $nik)
-            ->first();
+        $cekperjalanandinas = null;
         if ($cekperjalanandinas != null) {
             $kode_cabang = $cekperjalanandinas->kode_cabang;
             $lock_location = 0;
@@ -346,6 +247,15 @@ class PresensiController extends Controller
         $jam = date("Y-m-d H:i:s");
 
         $lok_kantor = DB::table('cabang')->where('kode_cabang', $kode_cabang)->first();
+        if ($lok_kantor == null) {
+            $pusat = DB::table('konfigurasi_lokasi')->where('id', 1)->first();
+            $lok_kantor = (object)[
+                'kode_cabang' => 'PST',
+                'nama_cabang' => 'Kantor Pusat',
+                'lokasi_cabang' => $pusat ? $pusat->lokasi_kantor : '-6.306488,106.666570',
+                'radius_cabang' => $pusat ? $pusat->radius : 100
+            ];
+        }
         $lok = explode(",", $lok_kantor->lokasi_cabang);
         $latitudekantor = $lok[0];
         $longitudekantor = $lok[1];
@@ -373,107 +283,46 @@ class PresensiController extends Controller
             $fileName = null;
         }
 
-        $cekjadwalshift = DB::table('hrd_jadwalshift_detail')
-            ->join('hrd_jadwalshift', 'hrd_jadwalshift_detail.kode_jadwalshift', '=', 'hrd_jadwalshift.kode_jadwalshift')
+        //Cek Apakah Memiliki Jadwal Shift Mingguan
+        $cekjadwalshift = DB::table('konfigurasi_jadwalkerja_detail')
+            ->join('konfigurasi_jadwalkerja', 'konfigurasi_jadwalkerja_detail.kode_setjadwal', '=', 'konfigurasi_jadwalkerja.kode_setjadwal')
             ->whereRaw('"' . $tgl_presensi . '" >= dari')
             ->whereRaw('"' . $tgl_presensi . '" <= sampai')
             ->where('nik', $nik)
             ->first();
 
-        $cekgantishift = DB::table('hrd_gantishift')->where('tanggal', $tgl_presensi)->where('nik', $nik)->first();
+        $cekgantishift = null;
 
         if ($cekgantishift != null) {
             $kode_jadwal = $cekgantishift->kode_jadwal;
         } else if ($cekjadwalshift != null) {
             $kode_jadwal = $cekjadwalshift->kode_jadwal;
         } else if ($cekperjalanandinas != null) {
-            $cekjadwaldinas = DB::table('hrd_jadwalkerja')
+            $cekjadwaldinas = DB::table('jadwal_kerja')
                 ->where('nama_jadwal', 'NON SHIFT')
                 ->where('kode_cabang', $cekperjalanandinas->kode_cabang)->first();
             $kode_jadwal = $cekjadwaldinas->kode_jadwal;
         } else {
-            $kode_jadwal = Auth::guard('karyawan')->user()->kode_jadwal;
+            $kode_jadwal = Auth::guard('karyawan')->user()->kode_jadwal ?? 'JD01';
         }
 
+        $libur = null;
+        $datalibur = null;
+        $tanggal_libur = '';
+        $ceklembur = null;
 
-        $libur = DB::table('hrd_harilibur_detail')
-            ->leftJoin('hrd_harilibur', 'hrd_harilibur_detail.kode_libur', '=', 'hrd_harilibur.kode_libur')
-            ->where('nik', $nik)
-            ->where('kode_cabang', $kode_cabang)
-            ->where('tanggal_limajam', $tgl_presensi);
+        $hariini = $this->hari_tanggal($tgl_presensi);
+        $jadwal = $this->getJamKerjaKaryawan($nik, $tgl_presensi, $hariini);
 
-
-        $ceklibur = $libur->count();
-        $datalibur = $libur->first();
-        $tanggal_libur = $datalibur != null ? $datalibur->tanggal : '';
-
-
-        $ceklembur = DB::table('hrd_lembur_detail')
-            ->join('hrd_lembur', 'hrd_lembur_detail.kode_lembur', '=', 'hrd_lembur.kode_lembur')
-            ->where('nik', $nik)
-            ->where('tanggal', $tgl_presensi)->count();
-
-        // if ($ceklibur > 0 && $this->hari_tanggal($tanggal_libur) == "Sabtu") {
-        //     $hariini = "Sabtu";
-        // } else {
-        //     $hariini = $this->hari_ini();
-        // }
-
-
-        if ($ceklibur > 0) {
-            $hariini = "Sabtu";
-        } else {
-            $hariini = $this->hari_ini();
+        if ($jadwal == null) {
+            $jadwal = DB::table('jadwal_kerja_detail')
+                ->join('jadwal_kerja', 'jadwal_kerja_detail.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
+                ->where('hari', $hariini)
+                ->where('jadwal_kerja_detail.kode_jadwal', 'JD01')
+                ->first();
         }
 
-        if ($ceklembur > 0 && $hariini == "Sabtu") {
-            $hariini = "Jumat";
-        }
-
-        $kode_jabatan = Auth::user()->kode_jabatan;
-        $jabatan = DB::table('hrd_jabatan')->where('kode_jabatan', $kode_jabatan)->first();
-
-        $nik_normal = [
-            "17.07.302",
-            "10.01.114",
-            "17.07.280",
-            "12.02.061",
-            "12.11.094",
-            "23.02.214",
-            "11.11.146",
-            "16.03.089",
-            "97.01.026",
-            "18.01.256",
-            "20.04.110",
-            "23.11.277",
-            "24.01.035",
-            "08.07.092"
-        ];
-
-        // Tanggal 25102024
-        if (date('Y-m-d') == '2024-10-25' && $kode_cabang == 'PST' && !in_array($nik, $nik_normal)) {
-            $hariini = "Sabtu";
-        }
-
-        if ($jabatan->nama_jabatan == "SECURITY" && $hariini == "Sabtu") {
-            $hariini = "Senin";
-        }
-
-        // $id_group = Auth::guard('karyawan')->user()->grup;
-        // $group_saus =  [29, 26, 27];
-        // if (date('Y-m-d') == '2024-02-10') {
-        //     if (in_array($id_group, $group_saus)) {
-        //         $hariini = "Senin";
-        //     }
-        // }
-
-
-
-        $jadwal = DB::table('hrd_jadwalkerja_detail')
-            ->join('hrd_jadwalkerja', 'hrd_jadwalkerja_detail.kode_jadwal', '=', 'hrd_jadwalkerja.kode_jadwal')
-            ->where('hari', $hariini)->where('hrd_jadwalkerja_detail.kode_jadwal', $kode_jadwal)
-            ->first();
-        $jam_kerja = DB::table('hrd_jamkerja')->where('kode_jam_kerja', $jadwal->kode_jam_kerja)->first();
+        $jam_kerja = DB::table('jam_kerja')->where('kode_jam_kerja', $jadwal->kode_jam_kerja)->first();
 
         $lintashari  = $jam_kerja->lintashari;
 
@@ -481,7 +330,7 @@ class PresensiController extends Controller
         $jarak = $this->distance($latitudekantor, $longitudekantor, $latitudeuser, $longitudeuser);
         $radius = round($jarak["meters"]);
 
-        $cek = DB::table('hrd_presensi')->where('tanggal', $tgl_presensi)->where('nik', $nik)->first();
+        $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('nik', $nik)->first();
 
 
 
@@ -490,9 +339,7 @@ class PresensiController extends Controller
 
         //cek Izin Terlambat
 
-        $cekizinterlambat = DB::table('hrd_presensi_izinterlambat')
-            ->join('hrd_izinterlambat', 'hrd_presensi_izinterlambat.kode_izin_terlambat', '=', 'hrd_izinterlambat.kode_izin_terlambat')
-            ->where('nik', $nik)->where('tanggal', $tgl_presensi)->first();
+        $cekizinterlambat = null;
 
         $kode_izin = $cekizinterlambat != null  ? $cekizinterlambat->kode_izin_terlambat : NULL;
 
@@ -516,7 +363,7 @@ class PresensiController extends Controller
                             'foto_in' => $fileName,
                             'lokasi_in' => $lokasi
                         ];
-                        $update = DB::table('hrd_presensi')->where('tanggal', $tgl_presensi)->where('nik', $nik)->update($data_masuk);
+                        $update = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('nik', $nik)->update($data_masuk);
                         if ($update) {
                             echo "success|Terimkasih, Selamat Bekerja|in";
                             if (isset($request->image)) {
@@ -529,16 +376,16 @@ class PresensiController extends Controller
                     } else if ($cek == null) {
                         $data = [
                             'nik' => $nik,
-                            'tanggal' => $tgl_presensi,
+                            'tgl_presensi' => $tgl_presensi,
                             'jam_in' => $jam,
                             'foto_in' => $fileName,
-                            'lokasi_in' => $lokasi,
+                            'location_in' => $lokasi,
                             'kode_jadwal' => $kode_jadwal,
                             'kode_jam_kerja' => $jadwal->kode_jam_kerja,
                             'status' => 'h',
                         ];
 
-                        $simpan = DB::table('hrd_presensi')->insert($data);
+                        $simpan = DB::table('presensi')->insert($data);
                         if ($simpan) {
                             echo "success|Terimkasih, Selamat Bekerja|in";
                             if (isset($request->image)) {
@@ -553,19 +400,14 @@ class PresensiController extends Controller
             } else if ($statuspresensi == "pulang") {
 
 
-                $ceklastpresensi = DB::table('hrd_presensi')
-                    ->join('hrd_jamkerja', 'hrd_presensi.kode_jam_kerja', '=', 'hrd_jamkerja.kode_jam_kerja')
-                    ->where('nik', $nik)->where('tanggal', $lastday)->first();
+                $ceklastpresensi = DB::table('presensi')
+                    ->join('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
+                    ->where('nik', $nik)->where('tgl_presensi', $lastday)->first();
 
                 $last_lintashari = $ceklastpresensi != null  ? $ceklastpresensi->lintashari : "";
                 $tgl_pulang_shift_3 = date("H:i", strtotime(($jam)));
 
-                $cekjadwalshiftlast = DB::table('hrd_jadwalshift_detail')
-                    ->join('hrd_jadwalshift', 'hrd_jadwalshift_detail.kode_jadwalshift', '=', 'hrd_jadwalshift.kode_jadwalshift')
-                    ->whereRaw('"' . $lastday . '" >= dari')
-                    ->whereRaw('"' . $lastday . '" <= sampai')
-                    ->where('nik', $nik)
-                    ->first();
+                $cekjadwalshiftlast = null;
                 $kode_jadwal_last = $cekjadwalshiftlast != null ? $cekjadwalshiftlast->kode_jadwal : $kode_jadwal;
                 //dd($cekjadwalshiftlast);
                 // /echo $tgl_pulang_shift_3;
@@ -621,33 +463,26 @@ class PresensiController extends Controller
                 // echo $jam_pulang;
                 // die;
 
-                $date_jampulang = date("Y-m-d", strtotime($jam_pulang));
-                $hour_jampulang = (date("H", strtotime($jam_pulang)) - 2);
-                $h_jampulang = $hour_jampulang < 9 ? "0" . $hour_jampulang : $hour_jampulang;
-                $jam_pulang = $date_jampulang . " " . $h_jampulang . ":00";
-
-                // echo $tgl_presensi;
-                // echo $jam_pulang;
-                //die;
+                $jam_pulang_formatted = date("Y-m-d H:i", strtotime($jam_pulang));
                 $jamabsen = $jam;
-                if ($jamabsen < $jam_pulang) {
-                    echo "error|Maaf Belum Waktunya Absen Pulang, Absen Pulang di Mulai Pada Pukul " . $jam_pulang . " |out" . $kode_jadwal;
+                if (strtotime($jamabsen) < strtotime($jam_pulang)) {
+                    echo "error|Maaf Belum Waktunya Absen Pulang, Absen Pulang di Mulai Pada Pukul " . $jam_pulang_formatted . " |out" . $kode_jadwal;
                 } else {
 
-                    $cek = DB::table('hrd_presensi')->where('tanggal', $tgl_presensi)->where('nik', $nik)->first();
+                    $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('nik', $nik)->first();
                     if ($cek == null) {
                         $data = [
                             'nik' => $nik,
-                            'tanggal' => $tgl_presensi,
+                            'tgl_presensi' => $tgl_presensi,
                             'jam_out' => $jam,
                             'foto_out' => $fileName,
-                            'lokasi_out' => $lokasi,
+                            'location_out' => $lokasi,
                             'kode_jadwal' => $kode_jadwal,
                             'kode_jam_kerja' => $kode_jam_kerja,
                             'status' => 'h',
                         ];
 
-                        $simpan = DB::table('hrd_presensi')->insert($data);
+                        $simpan = DB::table('presensi')->insert($data);
                         if ($simpan) {
                             echo "success|Terimkasih, Hati Hati Di Jalan|out";
                             if (isset($request->image)) {
@@ -663,9 +498,9 @@ class PresensiController extends Controller
                         $data_masuk = [
                             'jam_out' => $jam,
                             'foto_out' => $fileName,
-                            'lokasi_out' => $lokasi
+                            'location_out' => $lokasi
                         ];
-                        $update = DB::table('hrd_presensi')->where('tanggal', $tgl_presensi)->where('nik', $nik)->update($data_masuk);
+                        $update = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('nik', $nik)->update($data_masuk);
                         if ($update) {
                             if (isset($request->image)) {
                                 Storage::put($file, $image_base64);
@@ -702,7 +537,7 @@ class PresensiController extends Controller
     public function editprofile()
     {
         $nik = Auth::guard('karyawan')->user()->nik;
-        $karyawan = DB::table('hrd_karyawan')->where('nik', $nik)->first();
+        $karyawan = DB::table('karyawan')->select('karyawan.*', 'nama_lengkap as nama_karyawan')->where('nik', $nik)->first();
         return view('presensi.editprofile', compact('karyawan'));
     }
 
@@ -716,7 +551,7 @@ class PresensiController extends Controller
             'foto' => 'image|mimes:jpg,png,jpeg,gif,svg|max:1024',
         ]);
         $password = Hash::make($request->password);
-        $karyawan = DB::table('hrd_karyawan')->where('nik', $nik)->first();
+        $karyawan = DB::table('karyawan')->where('nik', $nik)->first();
         if ($request->hasFile('foto')) {
             $foto = $nik . "." . $request->file('foto')->getClientOriginalExtension();
         } else {
@@ -724,13 +559,13 @@ class PresensiController extends Controller
         }
         if (empty($request->password)) {
             $data = [
-                'nama_karyawan' => $nama_lengkap,
+                'nama_lengkap' => $nama_lengkap,
                 'no_hp' => $no_hp,
                 'foto' => $foto
             ];
         } else {
             $data = [
-                'nama_karyawan' => $nama_lengkap,
+                'nama_lengkap' => $nama_lengkap,
                 'no_hp' => $no_hp,
                 'password' => $password,
                 'foto' => $foto
@@ -738,7 +573,7 @@ class PresensiController extends Controller
         }
 
         try {
-            DB::table('hrd_karyawan')->where('nik', $nik)->update($data);
+            DB::table('karyawan')->where('nik', $nik)->update($data);
             if ($request->hasFile('foto')) {
                 $folderPath = "public/uploads/karyawan/";
                 $request->file('foto')->storeAs($folderPath, $foto);
@@ -764,55 +599,40 @@ class PresensiController extends Controller
         $sampai = date("Y-m-t", strtotime($dari));
         $nik = Auth::guard('karyawan')->user()->nik;
 
-        $data['histori'] = DB::table('hrd_presensi')
+        $data['histori'] = DB::table('presensi')
             ->select(
-                'hrd_presensi.*',
-                'hrd_jamkerja.jam_masuk as jam_mulai',
-                'hrd_jamkerja.jam_pulang as jam_selesai',
-                'hrd_jamkerja.lintashari',
-                'hrd_karyawan.kode_jabatan',
-                'hrd_karyawan.kode_dept',
-                'hrd_presensi_izinterlambat.kode_izin_terlambat',
-                'hrd_presensi_izinkeluar.kode_izin_keluar',
-                'hrd_izinkeluar.jam_keluar',
-                'hrd_izinkeluar.jam_kembali',
-                'hrd_jamkerja.total_jam',
-                'hrd_jamkerja.istirahat',
-                'hrd_jamkerja.jam_awal_istirahat',
-                'hrd_jamkerja.jam_akhir_istirahat',
-                'hrd_presensi_izinpulang.kode_izin_pulang',
-                'hrd_jadwalkerja.nama_jadwal',
-                'hrd_karyawan.kode_cabang',
-                'hrd_presensi.status',
-                'nama_cuti',
-                'nama_cuti_khusus',
-                'doc_sid'
+                'presensi.*',
+                'presensi.tgl_presensi as tanggal',
+                'presensi.location_in as lokasi_in',
+                'presensi.location_out as lokasi_out',
+                'jam_kerja.jam_masuk as jam_mulai',
+                'jam_kerja.jam_pulang as jam_selesai',
+                'jam_kerja.lintashari',
+                'karyawan.jabatan as kode_jabatan',
+                'karyawan.kode_dept',
+                DB::raw('NULL as kode_izin_terlambat'),
+                DB::raw('NULL as kode_izin_keluar'),
+                DB::raw('NULL as jam_keluar'),
+                DB::raw('NULL as jam_kembali'),
+                'jam_kerja.total_jam',
+                'jam_kerja.istirahat',
+                'jam_kerja.jam_awal_istirahat',
+                'jam_kerja.jam_akhir_istirahat',
+                DB::raw('NULL as kode_izin_pulang'),
+                'jadwal_kerja.nama_jadwal',
+                'jam_kerja.nama_jam_kerja',
+                'karyawan.kode_cabang',
+                'presensi.status',
+                DB::raw('NULL as nama_cuti'),
+                DB::raw('NULL as nama_cuti_khusus'),
+                DB::raw('NULL as doc_sid')
             )
-            ->join('hrd_karyawan', 'hrd_presensi.nik', '=', 'hrd_karyawan.nik')
-            ->leftJoin('hrd_jamkerja', 'hrd_presensi.kode_jam_kerja', '=', 'hrd_jamkerja.kode_jam_kerja')
-            ->leftJoin('hrd_jadwalkerja', 'hrd_presensi.kode_jadwal', '=', 'hrd_jadwalkerja.kode_jadwal')
-
-            ->leftJoin('hrd_presensi_izinterlambat', 'hrd_presensi.id', '=', 'hrd_presensi_izinterlambat.id_presensi')
-            ->leftJoin('hrd_izinterlambat', 'hrd_presensi_izinterlambat.kode_izin_terlambat', '=', 'hrd_izinterlambat.kode_izin_terlambat')
-
-            ->leftJoin('hrd_presensi_izinkeluar', 'hrd_presensi.id', '=', 'hrd_presensi_izinkeluar.id_presensi')
-            ->leftJoin('hrd_izinkeluar', 'hrd_presensi_izinkeluar.kode_izin_keluar', '=', 'hrd_izinkeluar.kode_izin_keluar')
-
-            ->leftJoin('hrd_presensi_izinpulang', 'hrd_presensi.id', '=', 'hrd_presensi_izinpulang.id_presensi')
-            ->leftJoin('hrd_izinpulang', 'hrd_presensi_izinpulang.kode_izin_pulang', '=', 'hrd_izinpulang.kode_izin_pulang')
-
-            ->leftJoin('hrd_presensi_izincuti', 'hrd_presensi.id', '=', 'hrd_presensi_izincuti.id_presensi')
-            ->leftJoin('hrd_izincuti', 'hrd_presensi_izincuti.kode_izin_cuti', '=', 'hrd_izincuti.kode_izin_cuti')
-            ->leftJoin('hrd_jeniscuti', 'hrd_izincuti.kode_cuti', '=', 'hrd_jeniscuti.kode_cuti')
-            ->leftJoin('hrd_jeniscuti_khusus', 'hrd_izincuti.kode_cuti_khusus', '=', 'hrd_jeniscuti_khusus.kode_cuti_khusus')
-
-            ->leftJoin('hrd_presensi_izinsakit', 'hrd_presensi.id', '=', 'hrd_presensi_izinsakit.id_presensi')
-            ->leftJoin('hrd_izinsakit', 'hrd_presensi_izinsakit.kode_izin_sakit', '=', 'hrd_izinsakit.kode_izin_sakit')
-
-            ->where('hrd_presensi.nik', $nik)
-            ->whereBetween('hrd_presensi.tanggal', [$dari, $sampai])
-            ->orderBy('hrd_presensi.tanggal', 'desc')
-
+            ->join('karyawan', 'presensi.nik', '=', 'karyawan.nik')
+            ->leftJoin('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
+            ->leftJoin('jadwal_kerja', 'presensi.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
+            ->where('presensi.nik', $nik)
+            ->whereBetween('presensi.tgl_presensi', [$dari, $sampai])
+            ->orderBy('presensi.tgl_presensi', 'desc')
             ->get();
 
 
@@ -826,7 +646,7 @@ class PresensiController extends Controller
     {
         $nik = Auth::guard('karyawan')->user()->nik;
 
-        //Izin terlmabat
+        //Izin terlambat
         $qizinterlambat = Izinterlambat::query();
         $qizinterlambat->where('nik', $nik);
         if (!empty($request->bulan)) {
@@ -909,6 +729,30 @@ class PresensiController extends Controller
         $qizinpulang->limit(7);
         $data['izinpulang'] = $qizinpulang->get();
 
+        $tahun_ini = date("Y");
+        $hak_cuti = DB::table('hrd_hak_cuti')
+            ->where('nik', $nik)
+            ->where('kode_cuti', 'C01')
+            ->where('tahun', $tahun_ini)
+            ->first();
+        
+        if ($hak_cuti) {
+            $data['jatah_cuti'] = $hak_cuti->jml_hari;
+        } else {
+            $cuti_tahunan = DB::table('hrd_jeniscuti')->where('kode_cuti', 'C01')->first();
+            $data['jatah_cuti'] = $cuti_tahunan != null ? $cuti_tahunan->jml_hari : 12;
+        }
+
+        $data['cuti_terpakai'] = DB::table('pengajuan_izin')
+            ->where('nik', $nik)
+            ->where('status', 'c')
+            ->where('status_approved', 1)
+            ->where('jenis_cuti', 'C01')
+            ->whereYear('tgl_izin', $tahun_ini)
+            ->sum('jmlhari');
+
+        $data['sisa_cuti'] = max(0, $data['jatah_cuti'] - $data['cuti_terpakai']);
+
         $data['namabulan'] = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
         return view('presensi.izin', $data);
     }
@@ -916,7 +760,7 @@ class PresensiController extends Controller
     public function buatizin()
     {
 
-        $mastercuti = DB::table('hrd_mastercuti')->get();
+        $mastercuti = [];
         return view('presensi.buatizin', compact('mastercuti'));
     }
 
@@ -1029,15 +873,123 @@ class PresensiController extends Controller
             ->orderBy('tgl_presensi')
             ->get();
 
+        $lembur = DB::table('hrd_lembur_detail')
+            ->join('hrd_lembur', 'hrd_lembur_detail.kode_lembur', '=', 'hrd_lembur.kode_lembur')
+            ->where('hrd_lembur_detail.nik', $nik)
+            ->whereMonth('hrd_lembur.tanggal', $bulan)
+            ->whereYear('hrd_lembur.tanggal', $tahun)
+            ->where('hrd_lembur.status', 1) // Approved
+            ->select('hrd_lembur.tanggal', 'hrd_lembur.tanggal_dari', 'hrd_lembur.tanggal_sampai')
+            ->get()
+            ->keyBy('tanggal');
+
         if (isset($_POST['exportexcel'])) {
-            $time = date("d-M-Y H:i:s");
+            $time = date("d-M-Y");
             // Fungsi header dengan mengirimkan raw data excel
             header("Content-type: application/vnd-ms-excel");
             // Mendefinisikan nama file ekspor "hasil-export.xls"
             header("Content-Disposition: attachment; filename=Laporan Presensi Karyawan $time.xls");
-            return view('presensi.cetaklaporanexcel', compact('bulan', 'tahun', 'namabulan', 'karyawan', 'presensi'));
+            return view('presensi.cetaklaporanexcel', compact('bulan', 'tahun', 'namabulan', 'karyawan', 'presensi', 'lembur'));
         }
-        return view('presensi.cetaklaporan', compact('bulan', 'tahun', 'namabulan', 'karyawan', 'presensi'));
+        return view('presensi.cetaklaporan', compact('bulan', 'tahun', 'namabulan', 'karyawan', 'presensi', 'lembur'));
+    }
+
+    public function laporanlembur()
+    {
+        $namabulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        $karyawan = DB::table('karyawan')->orderBy('nama_lengkap')->get();
+        return view('presensi.laporanlembur', compact('namabulan', 'karyawan'));
+    }
+
+    public function cetaklaporanlembur(Request $request)
+    {
+        $nik = $request->nik;
+        $bulan = $request->bulan;
+        $tahun = $request->tahun;
+        $namabulan = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+        $query = DB::table('hrd_lembur_detail')
+            ->join('hrd_lembur', 'hrd_lembur_detail.kode_lembur', '=', 'hrd_lembur.kode_lembur')
+            ->join('karyawan', 'hrd_lembur_detail.nik', '=', 'karyawan.nik')
+            ->leftJoin('presensi', function ($join) {
+                $join->on('hrd_lembur_detail.nik', '=', 'presensi.nik')
+                    ->on('hrd_lembur.tanggal', '=', 'presensi.tgl_presensi');
+            })
+            ->whereMonth('hrd_lembur.tanggal', $bulan)
+            ->whereYear('hrd_lembur.tanggal', $tahun)
+            ->where('hrd_lembur.status', 1); // Approved
+
+        if (!empty($nik)) {
+            $query->where('hrd_lembur_detail.nik', $nik);
+            $karyawan_selected = DB::table('karyawan')->where('nik', $nik)
+                ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+                ->first();
+        } else {
+            $karyawan_selected = null;
+        }
+
+        $lembur = $query->select(
+            'hrd_lembur_detail.nik',
+            'karyawan.nama_lengkap',
+            'hrd_lembur.tanggal',
+            'hrd_lembur.tanggal_dari',
+            'hrd_lembur.tanggal_sampai',
+            'hrd_lembur.keterangan',
+            'presensi.jam_in',
+            'presensi.jam_out'
+        )->orderBy('hrd_lembur.tanggal')->get();
+
+        if (isset($_POST['exportexcel'])) {
+            $time = date("d-M-Y");
+            // Fungsi header dengan mengirimkan raw data excel
+            header("Content-type: application/vnd-ms-excel");
+            // Mendefinisikan nama file ekspor "hasil-export.xls"
+            header("Content-Disposition: attachment; filename=Laporan Lembur Karyawan $time.xls");
+            return view('presensi.cetaklaporanlemburexcel', compact('bulan', 'tahun', 'namabulan', 'lembur', 'karyawan_selected', 'nik'));
+        }
+        return view('presensi.cetaklaporanlembur', compact('bulan', 'tahun', 'namabulan', 'lembur', 'karyawan_selected', 'nik'));
+    }
+
+    public function laporancuti()
+    {
+        $karyawan = DB::table('karyawan')->orderBy('nama_lengkap')->get();
+        return view('presensi.laporancuti', compact('karyawan'));
+    }
+
+    public function cetaklaporancuti(Request $request)
+    {
+        $nik = $request->nik;
+        $tahun = $request->tahun;
+
+        $query = DB::table('pengajuan_izin')
+            ->join('karyawan', 'pengajuan_izin.nik', '=', 'karyawan.nik')
+            ->join('hrd_jeniscuti', 'pengajuan_izin.jenis_cuti', '=', 'hrd_jeniscuti.kode_cuti')
+            ->where('pengajuan_izin.status', 'c')
+            ->where('pengajuan_izin.status_approved', 1)
+            ->whereYear('pengajuan_izin.tgl_izin', $tahun);
+
+        if (!empty($nik)) {
+            $query->where('pengajuan_izin.nik', $nik);
+            $karyawan_selected = DB::table('karyawan')->where('nik', $nik)
+                ->join('departemen', 'karyawan.kode_dept', '=', 'departemen.kode_dept')
+                ->first();
+        } else {
+            $karyawan_selected = null;
+        }
+
+        $cuti = $query->select(
+            'pengajuan_izin.*',
+            'karyawan.nama_lengkap',
+            'hrd_jeniscuti.nama_cuti'
+        )->orderBy('pengajuan_izin.tgl_izin')->get();
+
+        if (isset($_POST['exportexcel'])) {
+            $time = date("d-M-Y");
+            header("Content-type: application/vnd-ms-excel");
+            header("Content-Disposition: attachment; filename=Laporan Cuti Karyawan Per Tahun $time.xls");
+            return view('presensi.cetaklaporancutiexcel', compact('tahun', 'cuti', 'karyawan_selected', 'nik'));
+        }
+        return view('presensi.cetaklaporancuti', compact('tahun', 'cuti', 'karyawan_selected', 'nik'));
     }
 
     public function rekap()
@@ -1090,21 +1042,61 @@ class PresensiController extends Controller
             ->groupByRaw('presensi.nik,nama_lengkap')
             ->get();
 
+        $rekap_lembur = DB::table('hrd_lembur_detail')
+            ->join('hrd_lembur', 'hrd_lembur_detail.kode_lembur', '=', 'hrd_lembur.kode_lembur')
+            ->join('presensi', function($join) {
+                $join->on('hrd_lembur_detail.nik', '=', 'presensi.nik')
+                    ->on('hrd_lembur.tanggal', '=', 'presensi.tgl_presensi');
+            })
+            ->whereMonth('hrd_lembur.tanggal', $bulan)
+            ->whereYear('hrd_lembur.tanggal', $tahun)
+            ->where('hrd_lembur.status', 1) // Approved
+            ->select('hrd_lembur_detail.nik', 'hrd_lembur.tanggal', 'presensi.jam_in', 'presensi.jam_out', 'hrd_lembur.tanggal_dari', 'hrd_lembur.tanggal_sampai')
+            ->get();
+            
+        $total_lembur = [];
+        foreach ($rekap_lembur as $l) {
+            if (!empty($l->jam_in) && !empty($l->jam_out)) {
+                $presence_start = strtotime($l->tanggal . ' ' . $l->jam_in);
+                $presence_end = strtotime($l->tanggal . ' ' . $l->jam_out);
+                if ($presence_end < $presence_start) {
+                    $presence_end += 86400; // Crossover day
+                }
+                
+                $ot_start = strtotime($l->tanggal_dari);
+                $ot_end = strtotime($l->tanggal_sampai);
+                if ($ot_end < $ot_start) {
+                    $ot_end += 86400;
+                }
+                
+                $intersect_start = max($presence_start, $ot_start);
+                $intersect_end = min($presence_end, $ot_end);
+                
+                if ($intersect_start < $intersect_end) {
+                    $diff = ($intersect_end - $intersect_start) / 3600;
+                    if (!isset($total_lembur[$l->nik])) {
+                        $total_lembur[$l->nik] = 0;
+                    }
+                    $total_lembur[$l->nik] += $diff;
+                }
+            }
+        }
+
         if (isset($_POST['exportexcel'])) {
-            $time = date("d-M-Y H:i:s");
+            $time = date("d-M-Y");
             // Fungsi header dengan mengirimkan raw data excel
             header("Content-type: application/vnd-ms-excel");
             // Mendefinisikan nama file ekspor "hasil-export.xls"
             header("Content-Disposition: attachment; filename=Rekap Presensi Karyawan $time.xls");
         }
-        return view('presensi.cetakrekap', compact('bulan', 'tahun', 'namabulan', 'rekap'));
+        return view('presensi.cetakrekap', compact('bulan', 'tahun', 'namabulan', 'rekap', 'total_lembur'));
     }
 
     public function izinsakit(Request $request)
     {
 
         $query = Pengajuanizin::query();
-        $query->select('id', 'tgl_izin', 'pengajuan_izin.nik', 'nama_lengkap', 'jabatan', 'status', 'status_approved', 'keterangan');
+        $query->select('id', 'tgl_izin', 'pengajuan_izin.nik', 'nama_lengkap', 'jabatan', 'status', 'status_approved', 'keterangan', 'jenis_izin');
         $query->join('karyawan', 'pengajuan_izin.nik', '=', 'karyawan.nik');
         if (!empty($request->dari) && !empty($request->sampai)) {
             $query->whereBetween('tgl_izin', [$request->dari, $request->sampai]);
@@ -1131,26 +1123,65 @@ class PresensiController extends Controller
     {
         $status_approved = $request->status_approved;
         $id_izinsakit_form = $request->id_izinsakit_form;
-        $update = DB::table('pengajuan_izin')->where('id', $id_izinsakit_form)->update([
-            'status_approved' => $status_approved
-        ]);
-        if ($update) {
-            return Redirect::back()->with(['success' => 'Data Berhasil Di Update']);
-        } else {
-            return Redirect::back()->with(['warning' => 'Data Gagal Di Update']);
+        
+        $izin = DB::table('pengajuan_izin')->where('id', $id_izinsakit_form)->first();
+        if ($izin) {
+            $update = DB::table('pengajuan_izin')->where('id', $id_izinsakit_form)->update([
+                'status_approved' => $status_approved
+            ]);
+            
+            // Sync status to specific tables
+            $kode = $izin->kode_izin;
+            if (str_starts_with($kode, 'IA')) {
+                DB::table('hrd_izinabsen')->where('kode_izin', $kode)->update(['status' => $status_approved]);
+            } elseif (str_starts_with($kode, 'IS')) {
+                DB::table('hrd_izinsakit')->where('kode_izin_sakit', $kode)->update(['status' => $status_approved]);
+            } elseif (str_starts_with($kode, 'IC')) {
+                DB::table('hrd_izincuti')->where('kode_izin_cuti', $kode)->update(['status' => $status_approved]);
+            } elseif (str_starts_with($kode, 'IT')) {
+                DB::table('hrd_izinterlambat')->where('kode_izin_terlambat', $kode)->update(['status' => $status_approved]);
+            } elseif (str_starts_with($kode, 'IK')) {
+                DB::table('hrd_izinkeluar')->where('kode_izin_keluar', $kode)->update(['status' => $status_approved]);
+            } elseif (str_starts_with($kode, 'IP')) {
+                DB::table('hrd_izinpulang')->where('kode_izin_pulang', $kode)->update(['status_approved' => $status_approved]);
+            }
+            
+            if ($update) {
+                return Redirect::back()->with(['success' => 'Data Berhasil Di Update']);
+            }
         }
+        return Redirect::back()->with(['warning' => 'Data Gagal Di Update']);
     }
 
     public function batalkanizinsakit($id)
     {
-        $update = DB::table('pengajuan_izin')->where('id', $id)->update([
-            'status_approved' => 0
-        ]);
-        if ($update) {
-            return Redirect::back()->with(['success' => 'Data Berhasil Di Update']);
-        } else {
-            return Redirect::back()->with(['warning' => 'Data Gagal Di Update']);
+        $izin = DB::table('pengajuan_izin')->where('id', $id)->first();
+        if ($izin) {
+            $update = DB::table('pengajuan_izin')->where('id', $id)->update([
+                'status_approved' => 0
+            ]);
+            
+            // Sync status to specific tables
+            $kode = $izin->kode_izin;
+            if (str_starts_with($kode, 'IA')) {
+                DB::table('hrd_izinabsen')->where('kode_izin', $kode)->update(['status' => 0]);
+            } elseif (str_starts_with($kode, 'IS')) {
+                DB::table('hrd_izinsakit')->where('kode_izin_sakit', $kode)->update(['status' => 0]);
+            } elseif (str_starts_with($kode, 'IC')) {
+                DB::table('hrd_izincuti')->where('kode_izin_cuti', $kode)->update(['status' => 0]);
+            } elseif (str_starts_with($kode, 'IT')) {
+                DB::table('hrd_izinterlambat')->where('kode_izin_terlambat', $kode)->update(['status' => 0]);
+            } elseif (str_starts_with($kode, 'IK')) {
+                DB::table('hrd_izinkeluar')->where('kode_izin_keluar', $kode)->update(['status' => 0]);
+            } elseif (str_starts_with($kode, 'IP')) {
+                DB::table('hrd_izinpulang')->where('kode_izin_pulang', $kode)->update(['status_approved' => 0]);
+            }
+            
+            if ($update) {
+                return Redirect::back()->with(['success' => 'Data Berhasil Di Update']);
+            }
         }
+        return Redirect::back()->with(['warning' => 'Data Gagal Di Update']);
     }
 
     public function cekpengajuanizin(Request $request)
@@ -1211,6 +1242,22 @@ class PresensiController extends Controller
     {
         try {
             DB::table('pengajuan_izin')->where('kode_izin', $id)->delete();
+            
+            // Delete from specific tables as well
+            if (str_starts_with($id, 'IA')) {
+                DB::table('hrd_izinabsen')->where('kode_izin', $id)->delete();
+            } elseif (str_starts_with($id, 'IS')) {
+                DB::table('hrd_izinsakit')->where('kode_izin_sakit', $id)->delete();
+            } elseif (str_starts_with($id, 'IC')) {
+                DB::table('hrd_izincuti')->where('kode_izin_cuti', $id)->delete();
+            } elseif (str_starts_with($id, 'IT')) {
+                DB::table('hrd_izinterlambat')->where('kode_izin_terlambat', $id)->delete();
+            } elseif (str_starts_with($id, 'IK')) {
+                DB::table('hrd_izinkeluar')->where('kode_izin_keluar', $id)->delete();
+            } elseif (str_starts_with($id, 'IP')) {
+                DB::table('hrd_izinpulang')->where('kode_izin_pulang', $id)->delete();
+            }
+
             return redirect('/presensi/izin')->with(['success' => 'Data Berhasil Dihapus']);
         } catch (\Exception $e) {
             return redirect('/presensi/izin')->with(['error' => 'Data Gagal Dihapus']);
@@ -1236,7 +1283,7 @@ class PresensiController extends Controller
 
         $tgl_presensi   = date("Y-m-d", strtotime($scan));
         $karyawan       = DB::table('master_karyawan')->where('pin', $pin)->first();
-        $jabatan        = DB::table('hrd_jabatan')->where('id', $karyawan->id_jabatan)->first();
+        $jabatan        = (object)['nama_jabatan' => $karyawan->jabatan, 'kategori' => ''];
 
         if ($karyawan == null) {
             echo "PIN Tidak Ditemukan";
@@ -1266,7 +1313,7 @@ class PresensiController extends Controller
             ->where('nik', $nik)
             ->first();
 
-        $cekgantishift = DB::table('hrd_gantishift')->where('tanggal', $tgl_presensi)->where('nik', $nik)->first();
+        $cekgantishift = null;
 
         if ($cekgantishift != null) {
             $kode_jadwal = $cekgantishift->kode_jadwal;
@@ -1278,23 +1325,14 @@ class PresensiController extends Controller
                 ->where('kode_cabang', $cekperjalanandinas->kode_cabang)->first();
             $kode_jadwal = $cekjadwaldinas->kode_jadwal;
         } else {
-            $kode_jadwal = $karyawan->kode_jadwal;
+            $kode_jadwal = $karyawan->kode_jadwal ?? 'JD01';
         }
 
-        $libur = DB::table('harilibur_karyawan')
-            ->leftJoin('harilibur', 'harilibur_karyawan.kode_libur', '=', 'harilibur.kode_libur')
-            ->where('nik', $nik)
-            ->where('id_kantor', $kode_cabang)
-            ->where('tanggal_limajam', $tgl_presensi);
+        $ceklibur = 0;
+        $datalibur = null;
+        $tanggal_libur = '';
 
-        $ceklibur = $libur->count();
-        $datalibur = $libur->first();
-        $tanggal_libur = $datalibur != null ? $datalibur->tanggal_libur : '';
-
-        $ceklembur = DB::table('lembur_karyawan')
-            ->join('lembur', 'lembur_karyawan.kode_lembur', '=', 'lembur.kode_lembur')
-            ->where('nik', $nik)
-            ->where('tanggal', $tgl_presensi)->count();
+        $ceklembur = 0;
 
         if ($ceklibur > 0 && $this->hari_tanggal($tanggal_libur) == "Sabtu") {
             $hariini = "Sabtu";
@@ -1319,10 +1357,7 @@ class PresensiController extends Controller
             }
         }
 
-        $jadwal = DB::table('jadwal_kerja_detail')
-            ->join('jadwal_kerja', 'jadwal_kerja_detail.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
-            ->where('hari', $hariini)->where('jadwal_kerja_detail.kode_jadwal', $kode_jadwal)
-            ->first();
+        $jadwal = $this->getJamKerjaKaryawan($nik, $tgl_presensi, $hariini);
 
 
         $jam_kerja = DB::table('jam_kerja')->where('kode_jam_kerja', $jadwal->kode_jam_kerja)->first();
@@ -1380,13 +1415,9 @@ class PresensiController extends Controller
             $last_lintashari = $ceklastpresensi != null  ? $ceklastpresensi->lintashari : "";
             $tgl_pulang_shift_3 = date("H:i", strtotime(($jam)));
 
-            $cekjadwalshiftlast = DB::table('konfigurasi_jadwalkerja_detail')
-                ->join('konfigurasi_jadwalkerja', 'konfigurasi_jadwalkerja_detail.kode_setjadwal', '=', 'konfigurasi_jadwalkerja.kode_setjadwal')
-                ->whereRaw('"' . $lastday . '" >= dari')
-                ->whereRaw('"' . $lastday . '" <= sampai')
-                ->where('nik', $nik)
-                ->first();
-            $kode_jadwal_last = $cekjadwalshiftlast != null ? $cekjadwalshiftlast->kode_jadwal : $kode_jadwal;
+            $jadwal_last = $this->getJamKerjaKaryawan($nik, $lastday);
+            $kode_jam_kerja_last = $jadwal_last != null ? $jadwal_last->kode_jam_kerja : null;
+            $kode_jadwal_last = $jadwal_last != null ? ($jadwal_last->kode_jadwal ?? null) : null;
 
 
             $kode_jam_kerja = $jadwal->kode_jam_kerja;
@@ -1406,7 +1437,7 @@ class PresensiController extends Controller
 
                 //echo "A" . $jam_pulang;
             } else {
-                if ($tgl_pulang_shift_3 <= "08:00" && $kode_jadwal_last == "JD004") {
+                if ($tgl_pulang_shift_3 <= "08:00" && ($kode_jadwal_last == "JD004" || $kode_jadwal_last == "JD04" || $kode_jam_kerja_last == "JK04")) {
                     $tgl_presensi = $lastday;
                     $tgl_pulang = date('Y-m-d', strtotime('+1 day', strtotime($tgl_presensi)));
                     $jam_pulang = $tgl_pulang . " 07:00";
@@ -1437,14 +1468,10 @@ class PresensiController extends Controller
 
             }
 
-            $date_jampulang = date("Y-m-d", strtotime($jam_pulang));
-            $hour_jampulang = (date("H", strtotime($jam_pulang)) - 2);
-            $h_jampulang = $hour_jampulang < 9 ? "0" . $hour_jampulang : $hour_jampulang;
-            $jam_pulang = $date_jampulang . " " . $h_jampulang . ":00";
-
+            $jam_pulang_formatted = date("Y-m-d H:i", strtotime($jam_pulang));
             $jamabsen = $jam;
-            if ($jamabsen < $jam_pulang) {
-                echo "error|Maaf Belum Waktunya Absen Pulang, Absen Pulang di Mulai Pada Pukul "  . " " . $jam_pulang . " |out";
+            if (strtotime($jamabsen) < strtotime($jam_pulang)) {
+                echo "error|Maaf Belum Waktunya Absen Pulang, Absen Pulang di Mulai Pada Pukul "  . " " . $jam_pulang_formatted . " |out";
             } else {
                 $cek = DB::table('presensi')->where('tgl_presensi', $tgl_presensi)->where('nik', $nik)->first();
                 if ($cek == null) {
@@ -1480,13 +1507,77 @@ class PresensiController extends Controller
         }
     }
 
+    private function getJamKerjaKaryawan($nik, $tanggal, $hari_nama = null)
+    {
+        if ($hari_nama === null) {
+            $hari_nama = $this->hari_tanggal($tanggal);
+        }
+
+        // 1. Cek By Date
+        $cek_by_date = DB::table('konfigurasi_jk_karyawan_by_date')
+            ->where('nik', $nik)
+            ->where('tanggal', $tanggal)
+            ->first();
+        if ($cek_by_date != null) {
+            return (object) [
+                'nama_jadwal' => 'Jadwal Khusus Tanggal',
+                'kode_cabang' => 'PST',
+                'kode_jam_kerja' => $cek_by_date->kode_jam_kerja,
+                'hari' => $hari_nama
+            ];
+        }
+
+        // 2. Cek Weekly Shift Schedule
+        $cekjadwalshift = DB::table('konfigurasi_jadwalkerja_detail')
+            ->join('konfigurasi_jadwalkerja', 'konfigurasi_jadwalkerja_detail.kode_setjadwal', '=', 'konfigurasi_jadwalkerja.kode_setjadwal')
+            ->whereRaw('"' . $tanggal . '" >= dari')
+            ->whereRaw('"' . $tanggal . '" <= sampai')
+            ->where('nik', $nik)
+            ->first();
+        if ($cekjadwalshift != null) {
+            $jadwal = DB::table('jadwal_kerja_detail')
+                ->join('jadwal_kerja', 'jadwal_kerja_detail.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
+                ->where('hari', $hari_nama)->where('jadwal_kerja_detail.kode_jadwal', $cekjadwalshift->kode_jadwal)->first();
+            if ($jadwal) {
+                return $jadwal;
+            }
+        }
+
+        // 3. Cek Daily Config (Senin-Minggu)
+        $cek_daily = DB::table('konfigurasi_jk_karyawan')
+            ->where('nik', $nik)
+            ->where('hari', $hari_nama)
+            ->first();
+        if ($cek_daily != null) {
+            return (object) [
+                'nama_jadwal' => 'Jadwal Hari Karyawan',
+                'kode_cabang' => 'PST',
+                'kode_jam_kerja' => $cek_daily->kode_jam_kerja,
+                'hari' => $hari_nama
+            ];
+        }
+
+        // 4. Default / Fallback
+        $karyawan = DB::table('karyawan')->where('nik', $nik)->first();
+        $kode_jadwal = $karyawan->kode_jadwal ?? 'JD01';
+        $jadwal = DB::table('jadwal_kerja_detail')
+            ->join('jadwal_kerja', 'jadwal_kerja_detail.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
+            ->where('hari', $hari_nama)->where('jadwal_kerja_detail.kode_jadwal', $kode_jadwal)->first();
+        return $jadwal;
+    }
+
     public function idcard()
     {
         $nik = Auth::guard('karyawan')->user()->nik;
         $karyawan = Karyawan::where('nik', $nik)
-            ->join('hrd_jabatan', 'hrd_karyawan.kode_jabatan', '=', 'hrd_jabatan.kode_jabatan')
-            ->join('cabang', 'hrd_karyawan.kode_cabang', '=', 'cabang.kode_cabang')
+            ->leftJoin('cabang', 'karyawan.kode_cabang', '=', 'cabang.kode_cabang')
             ->first();
+
+        if ($karyawan) {
+            $karyawan->nama_jabatan = $karyawan->jabatan;
+            $karyawan->nama_cabang = $karyawan->nama_cabang ?? 'Kantor Pusat';
+        }
+
         return view('presensi.idcard', compact('karyawan'));
     }
 }

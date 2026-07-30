@@ -26,8 +26,9 @@
                                                 $d->lintashari == '1' ? date('Y-m-d', strtotime('+1 day', strtotime($d->tanggal))) : $d->tanggal;
 
                                             //Jam Absen Karyawan
-                                            $jam_in = date('Y-m-d H:i', strtotime($d->jam_in));
-                                            $jam_out = date('Y-m-d H:i', strtotime($d->jam_out));
+                                            $jam_in = $d->jam_in != null ? date('Y-m-d H:i', strtotime($d->tanggal . ' ' . $d->jam_in)) : null;
+                                            $jam_out = $d->jam_out != null ? date('Y-m-d H:i', strtotime($tanggal_selesai . ' ' . $d->jam_out)) : null;
+
 
                                             //Jadwal Jam Kerja
                                             $j_mulai = date('Y-m-d H:i', strtotime($d->tanggal . ' ' . $d->jam_mulai));
@@ -57,20 +58,8 @@
                                         <br>
 
                                         <!-- Cek Apakah Terlambat-->
-                                        @if (!empty($terlambat))
-                                            @php
-                                                $denda = hitungdenda(
-                                                    $terlambat['jamterlambat'],
-                                                    $terlambat['menitterlambat'],
-                                                    $d->kode_izin_terlambat,
-                                                    $d->kode_dept,
-                                                );
-
-                                            @endphp
-                                            {{-- {{ $denda['cek'] }} --}}
-                                            <span style="color:red">{{ $terlambat['keterangan_terlambat'] }}
-                                                - {{ !empty($denda['denda']) ? $denda['denda'] : $denda['keterangan'] }}
-                                            </span>
+                                        @if ($terlambat['status'])
+                                            <span style="color:red">Telat: {{ $terlambat['keterangan_terlambat'] }}</span>
                                         @else
                                             <span style="color:green">Tepat Waktu</span>
                                         @endif
@@ -110,7 +99,7 @@
                                 </div>
                             </div>
                             <div class="historidetail2">
-                                <h4 style="font-size: 14px">{{ $d->nama_jadwal }} {{ $d->kode_cabang }}</h4>
+                                <h4 style="font-size: 14px">{{ !empty($d->nama_jam_kerja) ? $d->nama_jam_kerja : $d->nama_jadwal }} {{ $d->kode_cabang }}</h4>
                                 <div class="primary" style="font-size: 12px">{{ date('H:i', strtotime($d->jam_mulai)) }} -
                                     {{ date('H:i', strtotime($d->jam_selesai)) }}
                                 </div>

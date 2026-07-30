@@ -109,6 +109,16 @@
                 <input type="text" value="{{ $jamkerja->jam_pulang }}" id="jam_pulang" class="form-control" placeholder="Jam Pulang" name="jam_pulang">
             </div>
         </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group mb-3">
+                <label class="form-label">Lintas Hari</label>
+                <select name="lintashari" id="lintashari" class="form-control">
+                    <option value="0" {{ $jamkerja->lintashari == '0' ? 'selected' : '' }}>Tidak</option>
+                    <option value="1" {{ $jamkerja->lintashari == '1' ? 'selected' : '' }}>Ya</option>
+                </select>
+            </div>
+        </div>
     </div>
     <div class="row mt-2">
         <div class="col-12">

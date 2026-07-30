@@ -526,8 +526,9 @@
                                                                         : $d->tanggal;
 
                                                                 //Jam Absen Karyawan
-                                                                $jam_in = $d->jam_in != null ? date('Y-m-d H:i', strtotime($d->jam_in)) : null;
-                                                                $jam_out = $d->jam_out != null ? date('Y-m-d H:i', strtotime($d->jam_out)) : null;
+                                                                $jam_in = $d->jam_in != null ? date('Y-m-d H:i', strtotime($d->tanggal . ' ' . $d->jam_in)) : null;
+                                                                $jam_out = $d->jam_out != null ? date('Y-m-d H:i', strtotime($tanggal_selesai . ' ' . $d->jam_out)) : null;
+
 
                                                                 //Jadwal Jam Kerja
                                                                 $j_mulai = date('Y-m-d H:i', strtotime($d->tanggal . ' ' . $d->jam_mulai));
@@ -557,26 +558,11 @@
                                                             <br>
 
                                                             <!-- Cek Apakah Terlambat-->
-                                                            {{-- @if (!empty($terlambat))
-
+                                                            @if ($terlambat['status'])
+                                                                <span style="color:red">Telat: {{ $terlambat['keterangan_terlambat'] }}</span>
                                                             @else
                                                                 <span style="color:green">Tepat Waktu</span>
-                                                            @endif --}}
-
-                                                            @php
-                                                                $denda = hitungdenda(
-                                                                    $terlambat['jamterlambat'],
-                                                                    $terlambat['menitterlambat'],
-                                                                    $d->kode_izin_terlambat,
-                                                                    $d->kode_dept,
-                                                                    $d->kode_jabatan,
-                                                                );
-
-                                                            @endphp
-                                                            {{-- {{ $denda['cek'] }} --}}
-                                                            <span style="color:{{ $terlambat['color'] }}">{{ $terlambat['keterangan'] }}
-                                                                - {{ !empty($denda['denda']) ? $denda['denda'] : $denda['keterangan'] }}
-                                                            </span>
+                                                            @endif
 
                                                             {{-- {{ $jam_out }} {{ $jam_selesai }} --}}
                                                             <!-- Cek Pulang Cepat -->
@@ -616,7 +602,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="historidetail2">
-                                                    <h4 style="font-size: 14px">{{ $d->nama_jadwal }} {{ $d->kode_cabang }}</h4>
+                                                    <h4 style="font-size: 14px">{{ !empty($d->nama_jam_kerja) ? $d->nama_jam_kerja : $d->nama_jadwal }} {{ $d->kode_cabang }}</h4>
                                                     <div class="primary" style="font-size: 12px">{{ date('H:i', strtotime($d->jam_mulai)) }} -
                                                         {{ date('H:i', strtotime($d->jam_selesai)) }}
                                                     </div>
@@ -683,6 +669,53 @@
                             </div>
                         @endif
                     @endforeach
+                </div>
+                <div class="tab-pane fade" id="profile" role="tabpanel">
+                    @forelse ($histori_lembur as $d)
+                        <div class="row mb-1">
+                            <div class="col">
+                                <div class="card historicard {{ $d->jam_out != null ? 'historibordergreen' : 'historiborderred' }}">
+                                    <div class="card-body">
+                                        <div class="historicontent">
+                                            <div class="historidetail1">
+                                                <div class="iconpresence">
+                                                    <ion-icon name="time-outline" class="{{ $d->jam_out != null ? 'text-success' : 'text-danger' }}" style="font-size: 48px"></ion-icon>
+                                                </div>
+                                                <div class="datepresence">
+                                                    <h4>{{ DateToIndo2($d->tanggal) }}</h4>
+                                                    <span class="timepresence">
+                                                        {!! $d->jam_in != null ? date('H:i', strtotime($d->jam_in)) : '<span class="danger">Belum Scan</span>' !!}
+                                                        {!! $d->jam_out != null ? '- ' . date('H:i', strtotime($d->jam_out)) : '<span class="danger"> - Belum Scan</span>' !!}
+                                                    </span>
+                                                    <br>
+                                                    <span class="small text-muted">{{ $d->keterangan }}</span>
+                                                </div>
+                                            </div>
+                                            <div class="historidetail2 text-right" style="text-align: right;">
+                                                <h4 style="font-size: 14px">Overtime</h4>
+                                                <div class="primary mb-1" style="font-size: 11px">
+                                                    {{ date('H:i', strtotime($d->tanggal_dari)) }} - {{ date('H:i', strtotime($d->tanggal_sampai)) }}
+                                                </div>
+                                                @if ($d->status == 0)
+                                                    <span class="badge bg-warning text-white">Pending</span>
+                                                @elseif ($d->status == 1)
+                                                    <span class="badge bg-success text-white">Approved</span>
+                                                @else
+                                                    <span class="badge bg-danger text-white">Rejected</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="row">
+                            <div class="col text-center p-3 text-muted">
+                                Tidak ada histori lembur.
+                            </div>
+                        </div>
+                    @endforelse
                 </div>
             </div>
         </div>

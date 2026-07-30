@@ -64,9 +64,9 @@
                                             </span>
                                         </label>
                                         <div class="input-group input-group-flat">
-                                            <input type="password" name="password" class="form-control" placeholder="Your password" autocomplete="off">
+                                            <input type="password" id="password" name="password" class="form-control" placeholder="Your password" autocomplete="off">
                                             <span class="input-group-text">
-                                                <a href="#" class="link-secondary" title="Show password" data-bs-toggle="tooltip">
+                                                <a href="#" id="show-password" class="link-secondary" title="Show password" data-bs-toggle="tooltip">
                                                     <!-- Download SVG icon from http://tabler-icons.io/i/eye -->
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                                         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -102,5 +102,23 @@
     <!-- Tabler Core -->
     <script src="{{ asset('tabler/dist/js/tabler.min.js?1674944402') }}" defer></script>
     <script src="{{ asset('tabler/dist/js/demo.min.js?1674944402') }}" defer></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const togglePassword = document.querySelector("#show-password");
+            const passwordInput = document.querySelector("#password");
+
+            if (togglePassword && passwordInput) {
+                togglePassword.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    // toggle the type attribute
+                    const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+                    passwordInput.setAttribute("type", type);
+                    
+                    // Toggle tooltip title
+                    this.setAttribute("title", type === "password" ? "Show password" : "Hide password");
+                });
+            }
+        });
+    </script>
 </body>
 </html>

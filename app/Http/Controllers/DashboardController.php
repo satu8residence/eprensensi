@@ -17,77 +17,83 @@ class DashboardController extends Controller
         $bulanini = date("m") * 1; //1 atau Januari
         $tahunini = date("Y"); // 2023
         $nik = Auth::guard('karyawan')->user()->nik;
-        $data['presensi_hariini'] = DB::table('hrd_presensi')->where('nik', $nik)->where('tanggal', $hariini)->first();
+        $data['presensi_hariini'] = DB::table('presensi')->where('nik', $nik)->where('tgl_presensi', $hariini)->first();
 
 
         //Rekap Presensi
-        $data['rekap_presensi'] = DB::table('hrd_presensi')
+        $data['rekap_presensi'] = DB::table('presensi')
             ->selectRaw('SUM(IF(status="h",1,0)) as jmlhadir,
             SUM(IF(status="i",1,0)) as jmlizin,
             SUM(IF(status="s",1,0)) as jmlsakit,
             SUM(IF( DATE_FORMAT(jam_in,"%H:%i") > DATE_FORMAT(jam_masuk,"%H:%i"),1,0)) as jmlterlambat')
-            ->leftjoin('hrd_jamkerja', 'hrd_presensi.kode_jam_kerja', '=', 'hrd_jamkerja.kode_jam_kerja')
+            ->leftjoin('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
             ->where('nik', $nik)
-            ->whereRaw('MONTH(tanggal)="' . $bulanini . '"')
-            ->whereRaw('YEAR(tanggal)="' . $tahunini . '"')
+            ->whereRaw('MONTH(tgl_presensi)="' . $bulanini . '"')
+            ->whereRaw('YEAR(tgl_presensi)="' . $tahunini . '"')
             ->first();
 
         //Histori 7 Hari Terakhir
-        $data['histori'] = DB::table('hrd_presensi')
+        $data['histori'] = DB::table('presensi')
             ->select(
-                'hrd_presensi.*',
-                'hrd_jamkerja.jam_masuk as jam_mulai',
-                'hrd_jamkerja.jam_pulang as jam_selesai',
-                'hrd_jamkerja.lintashari',
-                'hrd_karyawan.kode_jabatan',
-                'hrd_karyawan.kode_dept',
-                'hrd_presensi_izinterlambat.kode_izin_terlambat',
-                'hrd_presensi_izinkeluar.kode_izin_keluar',
-                'hrd_izinkeluar.jam_keluar',
-                'hrd_izinkeluar.jam_kembali',
-                'hrd_jamkerja.total_jam',
-                'hrd_jamkerja.istirahat',
-                'hrd_jamkerja.jam_awal_istirahat',
-                'hrd_jamkerja.jam_akhir_istirahat',
-                'hrd_presensi_izinpulang.kode_izin_pulang',
-                'hrd_jadwalkerja.nama_jadwal',
-                'hrd_karyawan.kode_cabang',
-                'hrd_presensi.status',
-                'nama_cuti',
-                'nama_cuti_khusus',
-                'doc_sid'
+                'presensi.*',
+                'presensi.tgl_presensi as tanggal',
+                'presensi.location_in as lokasi_in',
+                'presensi.location_out as lokasi_out',
+                'jam_kerja.jam_masuk as jam_mulai',
+                'jam_kerja.jam_pulang as jam_selesai',
+                'jam_kerja.lintashari',
+                'karyawan.jabatan as kode_jabatan',
+                'karyawan.kode_dept',
+                DB::raw('NULL as kode_izin_terlambat'),
+                DB::raw('NULL as kode_izin_keluar'),
+                DB::raw('NULL as jam_keluar'),
+                DB::raw('NULL as jam_kembali'),
+                'jam_kerja.total_jam',
+                'jam_kerja.istirahat',
+                'jam_kerja.jam_awal_istirahat',
+                'jam_kerja.jam_akhir_istirahat',
+                DB::raw('NULL as kode_izin_pulang'),
+                'jadwal_kerja.nama_jadwal',
+                'jam_kerja.nama_jam_kerja',
+                'karyawan.kode_cabang',
+                'presensi.status',
+                DB::raw('NULL as nama_cuti'),
+                DB::raw('NULL as nama_cuti_khusus'),
+                DB::raw('NULL as doc_sid')
             )
-            ->join('hrd_karyawan', 'hrd_presensi.nik', '=', 'hrd_karyawan.nik')
-            ->leftJoin('hrd_jamkerja', 'hrd_presensi.kode_jam_kerja', '=', 'hrd_jamkerja.kode_jam_kerja')
-            ->leftJoin('hrd_jadwalkerja', 'hrd_presensi.kode_jadwal', '=', 'hrd_jadwalkerja.kode_jadwal')
+            ->join('karyawan', 'presensi.nik', '=', 'karyawan.nik')
+            ->leftJoin('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
+            ->leftJoin('jadwal_kerja', 'presensi.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
+            ->where('presensi.nik', $nik)
+            ->where('presensi.tgl_presensi', '<=', $hariini)
+            ->orderBy('presensi.tgl_presensi', 'desc')
+            ->limit(7)
+            ->get();
 
-            ->leftJoin('hrd_presensi_izinterlambat', 'hrd_presensi.id', '=', 'hrd_presensi_izinterlambat.id_presensi')
-            ->leftJoin('hrd_izinterlambat', 'hrd_presensi_izinterlambat.kode_izin_terlambat', '=', 'hrd_izinterlambat.kode_izin_terlambat')
-
-            ->leftJoin('hrd_presensi_izinkeluar', 'hrd_presensi.id', '=', 'hrd_presensi_izinkeluar.id_presensi')
-            ->leftJoin('hrd_izinkeluar', 'hrd_presensi_izinkeluar.kode_izin_keluar', '=', 'hrd_izinkeluar.kode_izin_keluar')
-
-            ->leftJoin('hrd_presensi_izinpulang', 'hrd_presensi.id', '=', 'hrd_presensi_izinpulang.id_presensi')
-            ->leftJoin('hrd_izinpulang', 'hrd_presensi_izinpulang.kode_izin_pulang', '=', 'hrd_izinpulang.kode_izin_pulang')
-
-            ->leftJoin('hrd_presensi_izincuti', 'hrd_presensi.id', '=', 'hrd_presensi_izincuti.id_presensi')
-            ->leftJoin('hrd_izincuti', 'hrd_presensi_izincuti.kode_izin_cuti', '=', 'hrd_izincuti.kode_izin_cuti')
-            ->leftJoin('hrd_jeniscuti', 'hrd_izincuti.kode_cuti', '=', 'hrd_jeniscuti.kode_cuti')
-            ->leftJoin('hrd_jeniscuti_khusus', 'hrd_izincuti.kode_cuti_khusus', '=', 'hrd_jeniscuti_khusus.kode_cuti_khusus')
-
-            ->leftJoin('hrd_presensi_izinsakit', 'hrd_presensi.id', '=', 'hrd_presensi_izinsakit.id_presensi')
-            ->leftJoin('hrd_izinsakit', 'hrd_presensi_izinsakit.kode_izin_sakit', '=', 'hrd_izinsakit.kode_izin_sakit')
-
-            ->where('hrd_presensi.nik', $nik)
-            ->where('hrd_presensi.tanggal', '<=', $hariini)
-            ->orderBy('hrd_presensi.tanggal', 'desc')
+        $data['histori_lembur'] = DB::table('hrd_lembur_detail')
+            ->join('hrd_lembur', 'hrd_lembur_detail.kode_lembur', '=', 'hrd_lembur.kode_lembur')
+            ->leftJoin('presensi', function ($join) {
+                $join->on('hrd_lembur_detail.nik', '=', 'presensi.nik')
+                    ->on('hrd_lembur.tanggal', '=', 'presensi.tgl_presensi');
+            })
+            ->where('hrd_lembur_detail.nik', $nik)
+            ->select(
+                'hrd_lembur.tanggal',
+                'hrd_lembur.tanggal_dari',
+                'hrd_lembur.tanggal_sampai',
+                'hrd_lembur.keterangan',
+                'hrd_lembur.status',
+                'presensi.jam_in',
+                'presensi.jam_out'
+            )
+            ->orderBy('hrd_lembur.tanggal', 'desc')
             ->limit(7)
             ->get();
 
         $data['namabulan'] = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 
-        $jabatan = DB::table('hrd_jabatan')->where('kode_jabatan', Auth::guard('karyawan')->user()->kode_jabatan)->first();
+        $jabatan = (object)['nama_jabatan' => Auth::guard('karyawan')->user()->jabatan];
         $kode_dept = Auth::guard('karyawan')->user()->kode_dept;
         $kode_cabang = Auth::guard('karyawan')->user()->kode_cabang;
         $data['jabatan'] = $jabatan;
@@ -106,13 +112,13 @@ class DashboardController extends Controller
     {
         $hariini = date("Y-m-d");
         $rekappresensi = DB::table('presensi')
-            ->selectRaw('COUNT(nik) as jmlhadir, SUM(IF(jam_in > "07:00",1,0)) as jmlterlambat')
+            ->selectRaw('COUNT(nik) as jmlhadir, IFNULL(SUM(IF(jam_in > "07:00",1,0)),0) as jmlterlambat')
             ->where('tgl_presensi', $hariini)
             ->first();
 
         $rekapizin = DB::table('pengajuan_izin')
-            ->selectRaw('SUM(IF(status="i",1,0)) as jmlizin,SUM(IF(status="s",1,0)) as jmlsakit')
-            ->where('tgl_izin', $hariini)
+            ->selectRaw('IFNULL(SUM(IF(status="i",1,0)),0) as jmlizin, IFNULL(SUM(IF(status="s",1,0)),0) as jmlsakit')
+            ->whereRaw('? BETWEEN dari AND sampai', [$hariini])
             ->where('status_approved', 1)
             ->first();
 

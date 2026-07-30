@@ -139,7 +139,24 @@
                             <td>{{ $d->nik }}</td>
                             <td>{{ $d->nama_lengkap }}</td>
                             <td>{{ $d->jabatan }}</td>
-                            <td>{{ $d->status == "i" ? "Izin" : "Sakit" }}</td>
+                            <td>
+                                @if ($d->status == "i")
+                                    Izin
+                                    @if ($d->jenis_izin == 'TL')
+                                        (Terlambat)
+                                    @elseif ($d->jenis_izin == 'KL')
+                                        (Keluar Kantor)
+                                    @elseif ($d->jenis_izin == 'PL')
+                                        (Pulang)
+                                    @elseif ($d->jenis_izin == 'TM')
+                                        (Absen)
+                                    @endif
+                                @elseif ($d->status == "c")
+                                    Cuti
+                                @else
+                                    Sakit
+                                @endif
+                            </td>
                             <td>{{ $d->keterangan }}</td>
                             <td>
                                 @if ($d->status_approved==1)
@@ -151,8 +168,8 @@
                                 @endif
                             </td>
                             <td>
-                                @if ($d->status_approved==0)
-                                <a href="#" class="btn btn-sm btn-primary" id="approve" id_izinsakit="{{ $d->id }}">
+                                 @if ($d->status_approved==0)
+                                 <a href="#" class="btn btn-sm btn-primary approve" id_izinsakit="{{ $d->id }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-external-link" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                                         <path d="M11 7h-5a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-5"></path>
@@ -227,7 +244,7 @@
 @push('myscript')
 <script>
     $(function() {
-        $("#approve").click(function(e) {
+        $(".approve").click(function(e) {
             e.preventDefault();
             var id_izinsakit = $(this).attr("id_izinsakit");
             $("#id_izinsakit_form").val(id_izinsakit);

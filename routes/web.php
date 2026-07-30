@@ -11,6 +11,11 @@ use App\Http\Controllers\PinjamanController;
 use App\Http\Controllers\PinjamnaController;
 use App\Http\Controllers\PresensiController;
 use App\Http\Controllers\SlipgajiController;
+use App\Http\Controllers\SetjadwalController;
+use App\Http\Controllers\LemburController;
+use App\Http\Controllers\UtilityController;
+use App\Http\Controllers\CutiController;
+use App\Http\Controllers\HakcutiController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Psy\VarDumper\Presenter;
@@ -45,9 +50,8 @@ Route::middleware(['guest:user'])->group(function () {
 
     Route::post('/prosesloginadmin', [AuthController::class, 'prosesloginadmin']);
 });
-Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::middleware(['auth:karyawan'])->group(function () {
-
+    Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/proseslogout', [AuthController::class, 'proseslogout']);
 
     //Presensi
@@ -110,6 +114,7 @@ Route::middleware(['auth:user'])->group(function () {
     Route::post('/karyawan/edit', [KaryawanController::class, 'edit']);
     Route::post('/karyawan/{nik}/update', [KaryawanController::class, 'update']);
     Route::post('/karyawan/{nik}/delete', [KaryawanController::class, 'delete']);
+    Route::post('/karyawan/{nik}/resetpassword', [KaryawanController::class, 'resetpassword']);
 
     //Departemen
     Route::get('/departemen', [DepartemenController::class, 'index']);
@@ -118,6 +123,20 @@ Route::middleware(['auth:user'])->group(function () {
     Route::post('/departemen/{kode_dept}/update', [DepartemenController::class, 'update']);
     Route::post('/departemen/{kode_dept}/delete', [DepartemenController::class, 'delete']);
 
+    //Cuti Master
+    Route::get('/cuti', [CutiController::class, 'index']);
+    Route::post('/cuti/store', [CutiController::class, 'store']);
+    Route::post('/cuti/edit', [CutiController::class, 'edit']);
+    Route::post('/cuti/{kode_cuti}/update', [CutiController::class, 'update']);
+    Route::post('/cuti/{kode_cuti}/delete', [CutiController::class, 'delete']);
+
+    //Hak Cuti Karyawan
+    Route::get('/hakcuti', [HakcutiController::class, 'index']);
+    Route::post('/hakcuti/store', [HakcutiController::class, 'store']);
+    Route::post('/hakcuti/edit', [HakcutiController::class, 'edit']);
+    Route::post('/hakcuti/{id}/update', [HakcutiController::class, 'update']);
+    Route::post('/hakcuti/{id}/delete', [HakcutiController::class, 'delete']);
+
     //Presensi
     Route::get('/presensi/monitoring', [PresensiController::class, 'monitoring']);
 
@@ -125,6 +144,10 @@ Route::middleware(['auth:user'])->group(function () {
     Route::post('/tampilkanpeta', [PresensiController::class, 'tampilkanpeta']);
     Route::get('/presensi/laporan', [PresensiController::class, 'laporan']);
     Route::post('/presensi/cetaklaporan', [PresensiController::class, 'cetaklaporan']);
+    Route::get('/presensi/laporanlembur', [PresensiController::class, 'laporanlembur']);
+    Route::post('/presensi/cetaklaporanlembur', [PresensiController::class, 'cetaklaporanlembur']);
+    Route::get('/presensi/laporancuti', [PresensiController::class, 'laporancuti']);
+    Route::post('/presensi/cetaklaporancuti', [PresensiController::class, 'cetaklaporancuti']);
     Route::get('/presensi/rekap', [PresensiController::class, 'rekap']);
     Route::post('/presensi/cetakrekap', [PresensiController::class, 'cetakrekap']);
     Route::get('/presensi/izinsakit', [PresensiController::class, 'izinsakit']);
@@ -152,6 +175,32 @@ Route::middleware(['auth:user'])->group(function () {
     Route::post('/konfigurasi/editjamkerja', [KonfigurasiController::class, 'editjamkerja']);
     Route::post('/konfigurasi/updatejamkerja', [KonfigurasiController::class, 'updatejamkerja']);
     Route::post('/konfigurasi/{kode_jam_kerja}/delete', [KonfigurasiController::class, 'deletejamkerja']);
+
+    // Set Jadwal Shift Karyawan (Weekly Shift Schedule)
+    Route::get('/konfigurasi/setjadwal', [SetjadwalController::class, 'index']);
+    Route::post('/konfigurasi/setjadwal/store', [SetjadwalController::class, 'store']);
+    Route::get('/konfigurasi/setjadwal/download-template', [SetjadwalController::class, 'downloadTemplate']);
+    Route::post('/konfigurasi/setjadwal/{kode_setjadwal}/delete', [SetjadwalController::class, 'delete']);
+
+    // Set Jam Kerja Karyawan (Daily & By-Date Config)
+    Route::post('/karyawan/{nik}/setjamkerja', [KaryawanController::class, 'setjamkerja']);
+    Route::post('/karyawan/{nik}/setjamkerja/store', [KaryawanController::class, 'storesetjamkerja']);
+    Route::post('/karyawan/{nik}/setjamkerja/storebydate', [KaryawanController::class, 'storesetjamkerjabydate']);
+    Route::post('/karyawan/setjamkerja/{id}/deletebydate', [KaryawanController::class, 'deletesetjamkerjabydate']);
+
+    // Lembur (Overtime) CRUD
+    Route::get('/lembur', [LemburController::class, 'index']);
+    Route::post('/lembur/store', [LemburController::class, 'store']);
+    Route::post('/lembur/edit', [LemburController::class, 'edit']);
+    Route::post('/lembur/{kode_lembur}/update', [LemburController::class, 'update']);
+    Route::post('/lembur/{kode_lembur}/delete', [LemburController::class, 'delete']);
+    Route::post('/lembur/{kode_lembur}/approve', [LemburController::class, 'approve']);
+    Route::post('/lembur/{kode_lembur}/reject', [LemburController::class, 'reject']);
+    Route::post('/lembur/getkaryawanbydept', [LemburController::class, 'getkaryawanbydept']);
+
+    // Utilities - Bersihkan Foto
+    Route::get('/bersihkanfoto', [UtilityController::class, 'index']);
+    Route::post('/bersihkanfoto', [UtilityController::class, 'process']);
 });
 
 Route::post('/storefrommachine', [PresensiController::class, 'storefrommachine']);

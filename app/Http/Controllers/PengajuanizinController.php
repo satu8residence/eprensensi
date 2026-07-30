@@ -9,6 +9,9 @@ use App\Models\Disposisiizinsakit;
 use App\Models\Izinabsen;
 use App\Models\Izincuti;
 use App\Models\Izinsakit;
+use App\Models\Izinterlambat;
+use App\Models\Izinkeluarkantor;
+use App\Models\Izinpulang;
 use App\Models\Karyawan;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -59,9 +62,35 @@ class PengajuanizinController extends Controller
 
     public function createcuti()
     {
+        $nik = Auth::guard('karyawan')->user()->nik;
+        $tahun_ini = date("Y");
+        
+        $hak_cuti = DB::table('hrd_hak_cuti')
+            ->where('nik', $nik)
+            ->where('kode_cuti', 'C01')
+            ->where('tahun', $tahun_ini)
+            ->first();
+        
+        if ($hak_cuti) {
+            $jatah_cuti = $hak_cuti->jml_hari;
+        } else {
+            $cuti_tahunan = DB::table('hrd_jeniscuti')->where('kode_cuti', 'C01')->first();
+            $jatah_cuti = $cuti_tahunan != null ? $cuti_tahunan->jml_hari : 12;
+        }
+
+        $cuti_terpakai = DB::table('pengajuan_izin')
+            ->where('nik', $nik)
+            ->where('status', 'c')
+            ->where('status_approved', 1)
+            ->where('jenis_cuti', 'C01')
+            ->whereYear('tgl_izin', $tahun_ini)
+            ->sum('jmlhari');
+
+        $sisa_cuti = max(0, $jatah_cuti - $cuti_terpakai);
+
         $mastercuti = DB::table('hrd_jeniscuti')->get();
         $mastercutikhusus = DB::table('hrd_jeniscuti_khusus')->get();
-        return view('pengajuanizin.createcuti', compact('mastercuti', 'mastercutikhusus'));
+        return view('pengajuanizin.createcuti', compact('mastercuti', 'mastercutikhusus', 'sisa_cuti', 'jatah_cuti', 'cuti_terpakai'));
     }
 
 
@@ -71,74 +100,207 @@ class PengajuanizinController extends Controller
         $karyawan = Karyawan::where('nik', $nik)->first();
         $request->validate([
             'dari' => 'required',
-            'sampai' => 'required',
             'keterangan' => 'required',
         ]);
         DB::beginTransaction();
         try {
-            $jmlhari = hitungHari($request->dari, $request->sampai);
-            if ($jmlhari > 3) {
-                return Redirect::back()->with(messageError('Tidak Boleh Lebih dari 3 Hari!'));
-            }
-
-            $lastizin = Izinabsen::select('kode_izin')
-                ->whereRaw('YEAR(dari)="' . date('Y', strtotime($request->dari)) . '"')
-                ->whereRaw('MONTH(dari)="' . date('m', strtotime($request->dari)) . '"')
-                ->orderBy("kode_izin", "desc")
-                ->first();
-            $last_kode_izin = $lastizin != null ? $lastizin->kode_izin : '';
-            $kode_izin  = buatkode($last_kode_izin, "IA"  . date('ym', strtotime($request->dari)), 4);
+            $jenis_izin = $request->jenis_izin ?? 'TM';
             $k = new Karyawan();
             $karyawan = $k->getKaryawan($nik);
 
-            Izinabsen::create([
-                'kode_izin' => $kode_izin,
-                'nik' => $nik,
-                'kode_jabatan' => $karyawan->kode_jabatan,
-                'kode_dept' => $karyawan->kode_dept,
-                'kode_cabang' => $karyawan->kode_cabang,
-                'tanggal' => $request->dari,
-                'dari' => $request->dari,
-                'sampai' => $request->sampai,
-                'keterangan' => $request->keterangan,
-                'status' => 0,
-                'direktur' => 0,
-                'id_user' => 1,
-            ]);
+            if ($jenis_izin == 'TL') {
+                $lastizin = DB::table('hrd_izinterlambat')->select('kode_izin_terlambat')
+                    ->whereRaw('YEAR(tanggal)="' . date('Y', strtotime($request->dari)) . '"')
+                    ->whereRaw('MONTH(tanggal)="' . date('m', strtotime($request->dari)) . '"')
+                    ->orderBy("kode_izin_terlambat", "desc")
+                    ->first();
+                $last_kode_izin = $lastizin != null ? $lastizin->kode_izin_terlambat : '';
+                $kode_izin  = buatkode($last_kode_izin, "IT"  . date('ym', strtotime($request->dari)), 4);
 
-            $cekregional = Cabang::where('kode_cabang', $karyawan->kode_cabang)->first();
+                DB::table('hrd_izinterlambat')->insert([
+                    'kode_izin_terlambat' => $kode_izin,
+                    'nik' => $nik,
+                    'kode_jabatan' => $karyawan->kode_jabatan,
+                    'kode_dept' => $karyawan->kode_dept,
+                    'kode_cabang' => $karyawan->kode_cabang,
+                    'tanggal' => $request->dari,
+                    'jam_terlambat' => $request->jam_terlambat,
+                    'keterangan' => $request->keterangan,
+                    'status' => 0,
+                    'direktur' => 0,
+                    'id_user' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                DB::table('pengajuan_izin')->insert([
+                    'kode_izin' => $kode_izin,
+                    'nik' => $nik,
+                    'tgl_izin' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $request->dari,
+                    'status' => 'i',
+                    'status_approved' => 0,
+                    'keterangan' => $request->keterangan,
+                    'jmlhari' => 1,
+                    'jenis_izin' => 'TL',
+                    'jam_keluar' => $request->jam_terlambat,
+                    'created_by' => 'user'
+                ]);
+            } elseif ($jenis_izin == 'KL') {
+                $lastizin = DB::table('hrd_izinkeluar')->select('kode_izin_keluar')
+                    ->whereRaw('YEAR(tanggal)="' . date('Y', strtotime($request->dari)) . '"')
+                    ->whereRaw('MONTH(tanggal)="' . date('m', strtotime($request->dari)) . '"')
+                    ->orderBy("kode_izin_keluar", "desc")
+                    ->first();
+                $last_kode_izin = $lastizin != null ? $lastizin->kode_izin_keluar : '';
+                $kode_izin  = buatkode($last_kode_izin, "IK"  . date('ym', strtotime($request->dari)), 4);
 
-            $roles_approve = cekRoleapprovepresensi($karyawan->kode_dept, $karyawan->kode_cabang, $karyawan->kategori, $karyawan->kode_jabatan);
+                DB::table('hrd_izinkeluar')->insert([
+                    'kode_izin_keluar' => $kode_izin,
+                    'nik' => $nik,
+                    'kode_jabatan' => $karyawan->kode_jabatan,
+                    'kode_dept' => $karyawan->kode_dept,
+                    'kode_cabang' => $karyawan->kode_cabang,
+                    'tanggal' => $request->dari,
+                    'jam_keluar' => $request->jam_keluar,
+                    'jam_kembali' => '00:00:00',
+                    'keterangan' => $request->keterangan,
+                    'status' => 0,
+                    'direktur' => 0,
+                    'id_user' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                DB::table('pengajuan_izin')->insert([
+                    'kode_izin' => $kode_izin,
+                    'nik' => $nik,
+                    'tgl_izin' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $request->dari,
+                    'status' => 'i',
+                    'status_approved' => 0,
+                    'keterangan' => $request->keterangan,
+                    'jmlhari' => 1,
+                    'jenis_izin' => 'KL',
+                    'jam_keluar' => $request->jam_keluar,
+                    'created_by' => 'user'
+                ]);
+            } elseif ($jenis_izin == 'PL') {
+                $lastizin = DB::table('hrd_izinpulang')->select('kode_izin_pulang')
+                    ->whereRaw('YEAR(tanggal)="' . date('Y', strtotime($request->dari)) . '"')
+                    ->whereRaw('MONTH(tanggal)="' . date('m', strtotime($request->dari)) . '"')
+                    ->orderBy("kode_izin_pulang", "desc")
+                    ->first();
+                $last_kode_izin = $lastizin != null ? $lastizin->kode_izin_pulang : '';
+                $kode_izin  = buatkode($last_kode_izin, "IP"  . date('ym', strtotime($request->dari)), 4);
 
-            //dd($roles_approve);
-            // dd($karyawan->kategori);
-            // dd($roles_approve);
-            $index_role = 0;
-            // Jika Tidak Ada di dalam array
+                DB::table('hrd_izinpulang')->insert([
+                    'kode_izin_pulang' => $kode_izin,
+                    'nik' => $nik,
+                    'kode_jabatan' => $karyawan->kode_jabatan,
+                    'kode_dept' => $karyawan->kode_dept,
+                    'kode_cabang' => $karyawan->kode_cabang,
+                    'tanggal' => $request->dari,
+                    'jam_pulang' => $request->jam_pulang,
+                    'keterangan' => $request->keterangan,
+                    'status_approved' => 0,
+                    'direktur' => 0,
+                    'id_user' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                DB::table('pengajuan_izin')->insert([
+                    'kode_izin' => $kode_izin,
+                    'nik' => $nik,
+                    'tgl_izin' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $request->dari,
+                    'status' => 'i',
+                    'status_approved' => 0,
+                    'keterangan' => $request->keterangan,
+                    'jmlhari' => 1,
+                    'jenis_izin' => 'PL',
+                    'jam_pulang' => $request->jam_pulang,
+                    'created_by' => 'user'
+                ]);
+            } else {
+                $sampai = $request->sampai ?? $request->dari;
+                $jmlhari = hitungHari($request->dari, $sampai);
+                if ($jmlhari > 3) {
+                    return Redirect::back()->with(messageError('Tidak Boleh Lebih dari 3 Hari!'));
+                }
 
+                $lastizin = Izinabsen::select('kode_izin')
+                    ->whereRaw('YEAR(dari)="' . date('Y', strtotime($request->dari)) . '"')
+                    ->whereRaw('MONTH(dari)="' . date('m', strtotime($request->dari)) . '"')
+                    ->orderBy("kode_izin", "desc")
+                    ->first();
+                $last_kode_izin = $lastizin != null ? $lastizin->kode_izin : '';
+                $kode_izin  = buatkode($last_kode_izin, "IA"  . date('ym', strtotime($request->dari)), 4);
 
+                Izinabsen::create([
+                    'kode_izin' => $kode_izin,
+                    'nik' => $nik,
+                    'kode_jabatan' => $karyawan->kode_jabatan,
+                    'kode_dept' => $karyawan->kode_dept,
+                    'kode_cabang' => $karyawan->kode_cabang,
+                    'tanggal' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $sampai,
+                    'keterangan' => $request->keterangan,
+                    'status' => 0,
+                    'direktur' => 0,
+                    'id_user' => 1,
+                ]);
 
+                DB::table('pengajuan_izin')->insert([
+                    'kode_izin' => $kode_izin,
+                    'nik' => $nik,
+                    'tgl_izin' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $sampai,
+                    'status' => 'i',
+                    'status_approved' => 0,
+                    'keterangan' => $request->keterangan,
+                    'jmlhari' => $jmlhari,
+                    'jenis_izin' => 'TM',
+                    'created_by' => 'user'
+                ]);
 
-            $tanggal_hariini = date('Y-m-d');
-            $lastdisposisi = Disposisiizinabsen::whereRaw('date(created_at)="' . $tanggal_hariini . '"')
-                ->orderBy('kode_disposisi', 'desc')
-                ->first();
-            $last_kodedisposisi = $lastdisposisi != null ? $lastdisposisi->kode_disposisi : '';
-            $format = "DPIA" . date('Ymd');
-            $kode_disposisi = buatkode($last_kodedisposisi, $format, 4);
-            $cek_user_approve = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
-                ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
-                ->where('roles.name', $roles_approve[$index_role])->first()
-                ->where('users.status', '1')->first();
+                $roles_approve = cekRoleapprovepresensi($karyawan->kode_dept, $karyawan->kode_cabang, $karyawan->kategori, $karyawan->kode_jabatan);
+                $index_role = 0;
+                $tanggal_hariini = date('Y-m-d');
+                $lastdisposisi = Disposisiizinabsen::whereRaw('date(created_at)="' . $tanggal_hariini . '"')
+                    ->orderBy('kode_disposisi', 'desc')
+                    ->first();
+                $last_kodedisposisi = $lastdisposisi != null ? $lastdisposisi->kode_disposisi : '';
+                $format = "DPIA" . date('Ymd');
+                $kode_disposisi = buatkode($last_kodedisposisi, $format, 4);
+                try {
+                    $cek_user_approve = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+                        ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
+                        ->where('roles.name', $roles_approve[$index_role])
+                        ->where('users.status', '1')
+                        ->first();
+                } catch (\Exception $e) {
+                    $cek_user_approve = null;
+                }
 
+                if ($cek_user_approve == null) {
+                    $cek_user_approve = User::first();
+                }
 
-            Disposisiizinabsen::create([
-                'kode_disposisi' => $kode_disposisi,
-                'kode_izin' => $kode_izin,
-                'id_pengirim' => 1,
-                'id_penerima' => $cek_user_approve->id,
-                'status' => 0
-            ]);
+                Disposisiizinabsen::create([
+                    'kode_disposisi' => $kode_disposisi,
+                    'kode_izin' => $kode_izin,
+                    'id_pengirim' => 1,
+                    'id_penerima' => $cek_user_approve->id,
+                    'status' => 0
+                ]);
+            }
             DB::commit();
             return Redirect::back()->with(messageSuccess('Data Berhasil Disimpan'));
         } catch (\Exception $e) {
@@ -207,6 +369,21 @@ class PengajuanizinController extends Controller
                 if ($request->hasfile('sid')) {
                     $request->file('sid')->storeAs($destination_sid_path, $sid_name);
                 }
+                
+                $jmlhari = hitungHari($request->dari, $request->sampai);
+                DB::table('pengajuan_izin')->insert([
+                    'kode_izin' => $kode_izin_sakit,
+                    'nik' => $nik,
+                    'tgl_izin' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $request->sampai,
+                    'status' => 's',
+                    'status_approved' => 0,
+                    'keterangan' => $request->keterangan,
+                    'jmlhari' => $jmlhari,
+                    'sid' => isset($sid_name) ? $sid_name : null,
+                    'created_by' => 'user'
+                ]);
             }
 
 
@@ -230,10 +407,19 @@ class PengajuanizinController extends Controller
             $last_kodedisposisi = $lastdisposisi != null ? $lastdisposisi->kode_disposisi : '';
             $format = "DPIS" . date('Ymd');
             $kode_disposisi = buatkode($last_kodedisposisi, $format, 4);
-            $cek_user_approve = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
-                ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
-                ->where('roles.name', $roles_approve[$index_role])->first()
-                ->where('users.status', '1')->first();
+            try {
+                $cek_user_approve = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+                    ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
+                    ->where('roles.name', $roles_approve[$index_role])
+                    ->where('users.status', '1')
+                    ->first();
+            } catch (\Exception $e) {
+                $cek_user_approve = null;
+            }
+
+            if ($cek_user_approve == null) {
+                $cek_user_approve = User::first();
+            }
 
 
             Disposisiizinsakit::create([
@@ -316,6 +502,22 @@ class PengajuanizinController extends Controller
                 if ($request->hasfile('doc_cuti')) {
                     $request->file('doc_cuti')->storeAs($destination_cuti_path, $cuti_name);
                 }
+                
+                $jmlhari = hitungHari($request->dari, $request->sampai);
+                DB::table('pengajuan_izin')->insert([
+                    'kode_izin' => $kode_izin_cuti,
+                    'nik' => $nik,
+                    'tgl_izin' => $request->dari,
+                    'dari' => $request->dari,
+                    'sampai' => $request->sampai,
+                    'status' => 'c',
+                    'status_approved' => 0,
+                    'keterangan' => $request->keterangan,
+                    'jmlhari' => $jmlhari,
+                    'jenis_cuti' => $request->kode_cuti,
+                    'sid' => isset($cuti_name) ? $cuti_name : null,
+                    'created_by' => 'user'
+                ]);
             }
 
 
@@ -340,10 +542,19 @@ class PengajuanizinController extends Controller
             $last_kodedisposisi = $lastdisposisi != null ? $lastdisposisi->kode_disposisi : '';
             $format = "DPIC" . date('Ymd');
             $kode_disposisi = buatkode($last_kodedisposisi, $format, 4);
-            $cek_user_approve = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
-                ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
-                ->where('roles.name', $roles_approve[$index_role])->first()
-                ->where('users.status', '1')->first();
+            try {
+                $cek_user_approve = User::join('model_has_roles', 'users.id', '=', 'model_has_roles.model_id')
+                    ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
+                    ->where('roles.name', $roles_approve[$index_role])
+                    ->where('users.status', '1')
+                    ->first();
+            } catch (\Exception $e) {
+                $cek_user_approve = null;
+            }
+
+            if ($cek_user_approve == null) {
+                $cek_user_approve = User::first();
+            }
 
 
             Disposisiizincuti::create([

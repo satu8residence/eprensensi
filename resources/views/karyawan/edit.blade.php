@@ -93,6 +93,29 @@
                 @endforeach
             </select>
         </div>
+    <div class="row mt-2">
+        <div class="col-12">
+            <select name="kode_jadwal" id="kode_jadwal" class="form-select">
+                <option value="">Jadwal Shift</option>
+                @foreach ($jadwal_kerja as $j)
+                <option {{ $karyawan->kode_jadwal == $j->kode_jadwal ? 'selected' : '' }} value="{{ $j->kode_jadwal }}">{{ $j->nama_jadwal }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="input-icon mb-3">
+                <span class="input-icon-addon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-lock" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M5 11m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z"></path>
+                        <path d="M12 11v-4a3 3 0 0 1 6 0v4"></path>
+                    </svg>
+                </span>
+                <input type="password" id="password" class="form-control" name="password" placeholder="Password Baru (Kosongkan jika tidak diubah)">
+            </div>
+        </div>
     </div>
     <div class="row mt-2">
         <div class="col-12">

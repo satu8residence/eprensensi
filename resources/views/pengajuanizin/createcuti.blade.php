@@ -80,6 +80,14 @@
     <div class="row" style="margin-top:70px;">
         <div class="col">
             @include('layouts.alert')
+            
+            <div class="card mb-2" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; border-radius: 10px;">
+                <div class="card-body text-center" style="padding: 15px !important;">
+                    <h4 style="color: white; margin-bottom: 5px; font-weight: normal; font-size: 14px;">Sisa Cuti Tahunan Anda</h4>
+                    <h2 style="color: white; font-weight: bold; margin: 0; font-size: 28px;">{{ $sisa_cuti }} Hari</h2>
+                    <small style="opacity: 0.8; font-size: 11px;">Jatah Cuti: {{ $jatah_cuti }} hari | Terpakai: {{ $cuti_terpakai }} hari</small>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row mt-2">

@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#1e3c72">
-    <title>E-Presensi Geolocation</title>
+    <title>E-Presensi Satu8 Residence</title>
     <meta name="description" content="Mobilekit HTML Mobile UI Kit">
     <meta name="keywords" content="bootstrap 4, mobile template, cordova, phonegap, mobile, html" />
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}" sizes="32x32">
@@ -190,9 +190,9 @@
     <div class="login-container">
         <!-- Top Section -->
         <div class="header-section">
-            <ion-icon name="finger-print-outline" style="font-size: 80px; color: white; margin-bottom: 15px;"></ion-icon>
-            <h1 style="color: white;">E-Presensi</h1>
-            <p>Geolocation Presence System</p>
+            <img src="{{ asset('logo.png') }}" alt="Logo" style="height: 100px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+            <h1 style="color: white; font-weight: 700; margin-top: 5px;">E-Presensi</h1>
+            <p style="font-size: 14px; opacity: 0.9; margin-top: 5px; font-weight: 500;">Satu8 Residence</p>
         </div>
 
         <!-- Bottom Sheet -->

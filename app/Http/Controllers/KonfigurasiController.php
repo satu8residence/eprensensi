@@ -18,10 +18,18 @@ class KonfigurasiController extends Controller
     {
         $lokasi_kantor = $request->lokasi_kantor;
         $radius = $request->radius;
+        $nama_hrd = $request->nama_hrd;
+        $jabatan_hrd = $request->jabatan_hrd;
+        $nama_pimpinan = $request->nama_pimpinan;
+        $jabatan_pimpinan = $request->jabatan_pimpinan;
 
         $update = DB::table('konfigurasi_lokasi')->where('id', 1)->update([
             'lokasi_kantor' => $lokasi_kantor,
-            'radius' => $radius
+            'radius' => $radius,
+            'nama_hrd' => $nama_hrd,
+            'jabatan_hrd' => $jabatan_hrd,
+            'nama_pimpinan' => $nama_pimpinan,
+            'jabatan_pimpinan' => $jabatan_pimpinan
         ]);
 
         if ($update) {
@@ -45,6 +53,7 @@ class KonfigurasiController extends Controller
         $jam_masuk = $request->jam_masuk;
         $akhir_jam_masuk = $request->akhir_jam_masuk;
         $jam_pulang = $request->jam_pulang;
+        $lintashari = $request->lintashari;
 
         $data = [
             'kode_jam_kerja' => $kode_jam_kerja,
@@ -52,7 +61,8 @@ class KonfigurasiController extends Controller
             'awal_jam_masuk' => $awal_jam_masuk,
             'jam_masuk' => $jam_masuk,
             'akhir_jam_masuk' => $akhir_jam_masuk,
-            'jam_pulang' => $jam_pulang
+            'jam_pulang' => $jam_pulang,
+            'lintashari' => $lintashari
         ];
         try {
             DB::table('jam_kerja')->insert($data);
@@ -79,13 +89,15 @@ class KonfigurasiController extends Controller
         $jam_masuk = $request->jam_masuk;
         $akhir_jam_masuk = $request->akhir_jam_masuk;
         $jam_pulang = $request->jam_pulang;
+        $lintashari = $request->lintashari;
 
         $data = [
             'nama_jam_kerja' => $nama_jam_kerja,
             'awal_jam_masuk' => $awal_jam_masuk,
             'jam_masuk' => $jam_masuk,
             'akhir_jam_masuk' => $akhir_jam_masuk,
-            'jam_pulang' => $jam_pulang
+            'jam_pulang' => $jam_pulang,
+            'lintashari' => $lintashari
         ];
         try {
             DB::table('jam_kerja')->where('kode_jam_kerja', $kode_jam_kerja)->update($data);

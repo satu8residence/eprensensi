@@ -305,11 +305,11 @@
                 <div class="avatar-wrapper">
                     @if (!empty(Auth::guard('karyawan')->user()->foto))
                         @php
-                            $path = 'https://app.portalmp.com/storage/karyawan/' . Auth::guard('karyawan')->user()->foto;
+                            $path = asset('storage/uploads/karyawan/' . Auth::guard('karyawan')->user()->foto);
                         @endphp
                         <img src="{{ $path }}" alt="avatar">
                     @else
-                        <img src="assets/img/sample/avatar/avatar1.jpg" alt="avatar">
+                        <img src="{{ asset('assets/img/sample/avatar/avatar1.jpg') }}" alt="avatar">
                     @endif
                 </div>
                 <div class="user-text">
@@ -413,8 +413,8 @@
                              @if ($d->status == 'h')
                                  @php
                                      // Logic Calculations
-                                     $jam_in = $d->jam_in != null ? date('Y-m-d H:i', strtotime($d->jam_in)) : null;
-                                     $jam_out = $d->jam_out != null ? date('Y-m-d H:i', strtotime($d->jam_out)) : null;
+                                     $jam_in = $d->jam_in != null ? date('Y-m-d H:i', strtotime($d->tanggal . ' ' . $d->jam_in)) : null;
+                                     $jam_out = $d->jam_out != null ? date('Y-m-d H:i', strtotime($tanggal_selesai . ' ' . $d->jam_out)) : null;
                                      
                                      // Jadwal Jam Kerja
                                      $tanggal_selesai = $d->lintashari == '1' ? date('Y-m-d', strtotime('+1 day', strtotime($d->tanggal))) : $d->tanggal;
@@ -430,9 +430,6 @@
                                      // Terlambat
                                      $terlambat = hitungjamterlambat($jam_in, $jam_mulai, $d->kode_izin_terlambat);
                                      
-                                     // Denda
-                                     $denda = hitungdenda($terlambat['jamterlambat'], $terlambat['menitterlambat'], $d->kode_izin_terlambat, $d->kode_dept, $d->kode_jabatan);
-
                                      // Izin Keluar Logic
                                      if ($d->istirahat == '1') {
                                          if ($d->lintashari == '0') {
@@ -448,10 +445,13 @@
                                      }
                                  @endphp
 
-                                 {{-- Display Terlambat & Denda --}}
+                                 {{-- Display Terlambat --}}
                                  <div class="detail-item" style="color:{{ $terlambat['color'] }}; font-size: 11px;">
-                                     {{ $terlambat['keterangan'] }} 
-                                     {{ !empty($denda['denda']) ? ' - ' . $denda['denda'] : '' }}
+                                     @if ($terlambat['status'])
+                                         Telat: {{ $terlambat['keterangan_terlambat'] }}
+                                     @else
+                                         Tepat Waktu
+                                     @endif
                                  </div>
 
                                  {{-- Pulang Cepat --}}

@@ -240,6 +240,9 @@ function cekRoleapprovelembur($kode_dept)
 
 function cekRoleapprovepresensi($kode_dept, $kode_cabang, $kategori_jabatan, $kode_jabatan = "")
 {
+    if (empty($kode_cabang)) {
+        $kode_cabang = 'PST';
+    }
     // Cek Role Name
     // $role = Auth::user()->roles->pluck('name')[0];
 
@@ -427,7 +430,7 @@ function hitungjamkeluarkantor($jam_keluar, $j_kembali, $jam_selesai, $jam_out, 
 }
 
 
-function hitungjamterlambat($jam_in, $jam_mulai, $kode_izin_terlambat)
+function hitungjamterlambat($jam_in, $jam_mulai, $kode_izin_terlambat = null)
 {
 
     // $jam_in = date('Y-m-d H:i', strtotime($jam_in));
@@ -460,6 +463,7 @@ function hitungjamterlambat($jam_in, $jam_mulai, $kode_izin_terlambat)
             return [
                 'status' => true,
                 'keterangan' => 'Telat :' . $keterangan_terlambat . ' (' . $desimal_terlambat . ')',
+                'keterangan_terlambat' => $keterangan_terlambat,
                 'jamterlambat' => $jamterlambat,
                 'menitterlambat' => $menitterlambat,
                 'desimal' => $desimal_terlambat,
@@ -469,6 +473,7 @@ function hitungjamterlambat($jam_in, $jam_mulai, $kode_izin_terlambat)
             return [
                 'status' => false,
                 'keterangan' => 'Tepat Waktu',
+                'keterangan_terlambat' => '',
                 'jamterlambat' => 0,
                 'menitterlambat' => 0,
                 'desimal' => 0,
@@ -479,6 +484,7 @@ function hitungjamterlambat($jam_in, $jam_mulai, $kode_izin_terlambat)
         return [
             'status' => false,
             'keterangan' => '',
+            'keterangan_terlambat' => '',
             'jamterlambat' => 0,
             'menitterlambat' => 0,
             'desimal' => 0,
@@ -488,7 +494,7 @@ function hitungjamterlambat($jam_in, $jam_mulai, $kode_izin_terlambat)
 }
 
 
-function hitungdenda($jamterlambat, $menitterlambat, $kode_izin_terlambat, $kode_dept, $kode_jabatan)
+function hitungdenda($jamterlambat, $menitterlambat, $kode_izin_terlambat, $kode_dept, $kode_jabatan = "")
 {
 
     //

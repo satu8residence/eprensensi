@@ -15,14 +15,16 @@
 @section('content')
     @php
         use SimpleSoftwareIO\QrCode\Facades\QrCode;
-        function getInitials($name)
-        {
-            $words = explode(' ', $name);
-            $initials = '';
-            foreach ($words as $word) {
-                $initials .= strtoupper(substr($word, 0, 1));
+        if (!function_exists('getInitials')) {
+            function getInitials($name)
+            {
+                $words = explode(' ', $name);
+                $initials = '';
+                foreach ($words as $word) {
+                    $initials .= strtoupper(substr($word, 0, 1));
+                }
+                return $initials;
             }
-            return $initials;
         }
     @endphp
     <style>
@@ -236,10 +238,7 @@
             <div class="header-pattern"></div>
             <div class="logo-container">
                 <div class="logo">
-                    <img src="{{ asset('assets/img/aida.png') }}" alt="Logo 1">
-                </div>
-                <div class="logo">
-                    <img src="{{ asset('assets/img/swan.png') }}" alt="Logo 2">
+                    <img src="{{ asset('logo.png') }}" alt="Satu8 Residence">
                 </div>
             </div>
             <h2>ID Card</h2>
@@ -249,7 +248,7 @@
             <div class="profile-image">
                 @if (!empty(Auth::guard('karyawan')->user()->foto))
                     @php
-                        $path = 'https://app.portalmp.com/storage/karyawan/' . Auth::guard('karyawan')->user()->foto;
+                        $path = asset('storage/uploads/karyawan/' . Auth::guard('karyawan')->user()->foto);
                     @endphp
                     <img src="{{ $path }}" alt="Foto Karyawan">
                 @else

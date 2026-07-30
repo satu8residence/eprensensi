@@ -7,7 +7,7 @@
                 <!-- Page pre-title -->
 
                 <h2 class="page-title">
-                    Konfigurasi Lokasi
+                    Konfigurasi Lokasi & TTD Laporan
                 </h2>
             </div>
 
@@ -63,6 +63,71 @@
                                             </svg>
                                         </span>
                                         <input type="text" value="{{ $lok_kantor->radius }}" id="radius" class="form-control" placeholder="Radius" name="radius">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="input-icon mb-3">
+                                        <span class="input-icon-addon">
+                                            <!-- User SVG icon -->
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"></path>
+                                                <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path>
+                                            </svg>
+                                        </span>
+                                        <input type="text" value="{{ $lok_kantor->nama_hrd }}" id="nama_hrd" class="form-control" placeholder="Nama HRD Manager" name="nama_hrd">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="input-icon mb-3">
+                                        <span class="input-icon-addon">
+                                            <!-- Award/Briefcase icon -->
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-briefcase" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"></path>
+                                                <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"></path>
+                                                <path d="M12 12l0 .01"></path>
+                                                <path d="M3 13a20 20 0 0 0 18 0"></path>
+                                            </svg>
+                                        </span>
+                                        <input type="text" value="{{ $lok_kantor->jabatan_hrd }}" id="jabatan_hrd" class="form-control" placeholder="Jabatan HRD" name="jabatan_hrd">
+                                    </div>
+                                </div>
+                            </div>
+                            <hr class="my-2" style="border-top: 1px dashed #ccc;">
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="input-icon mb-3">
+                                        <span class="input-icon-addon">
+                                            <!-- User SVG icon -->
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user-check" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"></path>
+                                                <path d="M6 21v-2a4 4 0 0 1 4 -4h4"></path>
+                                                <path d="M15 19l2 2l4 -4"></path>
+                                            </svg>
+                                        </span>
+                                        <input type="text" value="{{ $lok_kantor->nama_pimpinan }}" id="nama_pimpinan" class="form-control" placeholder="Nama Pimpinan/Direktur" name="nama_pimpinan">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="input-icon mb-3">
+                                        <span class="input-icon-addon">
+                                            <!-- Shield/Briefcase icon -->
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-award" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path d="M12 9m-6 0a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"></path>
+                                                <path d="M12 15l3.4 5.89a1 1 0 0 1 -1.48 1.25l-1.92 -1.14l-1.92 1.14a1 1 0 0 1 -1.48 -1.25l3.4 -5.89"></path>
+                                                <path d="M15.5 9.5a3.5 3.5 0 1 1 -7 0a3.5 3.5 0 0 1 7 0"></path>
+                                            </svg>
+                                        </span>
+                                        <input type="text" value="{{ $lok_kantor->jabatan_pimpinan }}" id="jabatan_pimpinan" class="form-control" placeholder="Jabatan Pimpinan" name="jabatan_pimpinan">
                                     </div>
                                 </div>
                             </div>
