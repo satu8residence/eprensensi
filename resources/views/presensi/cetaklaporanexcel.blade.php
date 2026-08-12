@@ -194,7 +194,8 @@
             @endphp
             @foreach ($presensi as $d)
             @php
-            $jamterlambat = selisih('07:00:00',$d->jam_in);
+            $jam_masuk = !empty($d->jam_masuk) ? $d->jam_masuk : '07:00:00';
+            $jamterlambat = selisih($jam_masuk, $d->jam_in);
 
             $l = $lembur->get($d->tgl_presensi);
             
@@ -229,7 +230,7 @@
                 <td>{{ $d->jam_in }}</td>
                 <td>{{ $d->jam_out != null ? $d->jam_out : 'Belum Absen' }}</td>
                 <td>
-                    @if ($d->jam_in > '07:00')
+                    @if ($d->jam_in > $jam_masuk)
                     Terlambat {{ $jamterlambat }}
                     @else
                     Tepat Waktu

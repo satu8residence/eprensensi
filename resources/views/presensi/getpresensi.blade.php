@@ -45,9 +45,12 @@ $foto_out = Storage::url('uploads/absensi/'.$d->foto_out);
 
     </td>
     <td>
-        @if ($d->jam_in >= '07:00')
         @php
-        $jamterlambat = selisih('07:00:00',$d->jam_in);
+            $jam_masuk = !empty($d->jam_masuk) ? $d->jam_masuk : '07:00:00';
+        @endphp
+        @if ($d->jam_in > $jam_masuk)
+        @php
+        $jamterlambat = selisih($jam_masuk, $d->jam_in);
         @endphp
         <span class="badge bg-danger">Terlambat {{ $jamterlambat }}</span>
         @else

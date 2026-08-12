@@ -218,7 +218,8 @@
             @php
             $path_in = Storage::url('uploads/absensi/'.$d->foto_in);
             $path_out = Storage::url('uploads/absensi/'.$d->foto_out);
-            $jamterlambat = selisih('07:00:00',$d->jam_in);
+            $jam_masuk = !empty($d->jam_masuk) ? $d->jam_masuk : '07:00:00';
+            $jamterlambat = selisih($jam_masuk, $d->jam_in);
 
             $l = $lembur->get($d->tgl_presensi);
             
@@ -261,7 +262,7 @@
                     @endif
                 </td>
                 <td>
-                    @if ($d->jam_in > '07:00')
+                    @if ($d->jam_in > $jam_masuk)
                     Terlambat {{ $jamterlambat }}
                     @else
                     Tepat Waktu
