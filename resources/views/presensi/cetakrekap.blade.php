@@ -15,7 +15,7 @@
     <!-- Set also "landscape" if you need -->
     <style>
         @page {
-            size: A4
+            size: A4 landscape;
         }
 
         #title {
@@ -165,20 +165,25 @@
                 for($i=1; $i<=31; $i++){
                     $tgl = "tgl_".$i;
                     if(empty($d->$tgl)){
-                        $hadir = ['',''];
+                        $hadir = ['','','',''];
                         $totalhadir += 0;
                     }else{
                         $hadir = explode("-",$d->$tgl);
                         $totalhadir += 1;
-                        if($hadir[0] > "07:00:00"){
-                            $totalterlambat +=1;
+                        $scheduled_in = !empty($hadir[2]) ? $hadir[2] : "07:00:00";
+                        if($hadir[0] > $scheduled_in){
+                            $totalterlambat += 1;
                         }
                     }
                 ?>
 
                 <td style="text-align: center;">
-                    <span style="color:{{ $hadir[0]>"07:00:00" ? "red" : "" }}">{{ !empty($hadir[0]) ? date("H:i", strtotime($hadir[0])) : "" }}</span><br>
-                    <span style="color:{{ $hadir[1]<"16:00:00" ? "red" : "" }}">{{ !empty($hadir[1]) ? date("H:i", strtotime($hadir[1])) : "" }}</span>
+                    @php
+                        $scheduled_in = !empty($hadir[2]) ? $hadir[2] : "07:00:00";
+                        $scheduled_out = !empty($hadir[3]) ? $hadir[3] : "17:00:00";
+                    @endphp
+                    <span style="color:{{ (!empty($hadir[0]) && $hadir[0] > $scheduled_in) ? 'red' : '' }}">{{ !empty($hadir[0]) ? date("H:i", strtotime($hadir[0])) : "" }}</span><br>
+                    <span style="color:{{ (!empty($hadir[1]) && $hadir[1] < $scheduled_out) ? 'red' : '' }}">{{ !empty($hadir[1]) ? date("H:i", strtotime($hadir[1])) : "" }}</span>
                 </td>
 
                 <?php
