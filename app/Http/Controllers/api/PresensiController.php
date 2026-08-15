@@ -218,7 +218,7 @@ class PresensiController extends Controller
             $kode_jam_kerja = $jadwal->kode_jam_kerja;
 
             if (!empty($last_lintashari)) {
-                if ($jam_sekarang > "00:00" && $jam_sekarang <= "08:00") {
+                if ($jam_sekarang > "00:00" && $jam_sekarang <= "14:00") {
                     $tgl_presensi = $lastday;
                 }
 
@@ -232,7 +232,7 @@ class PresensiController extends Controller
 
                 //echo "A" . $jam_pulang;
             } else {
-                if ($tgl_pulang_shift_3 <= "08:00" && $kode_jadwal_last == "JD004") {
+                if ($tgl_pulang_shift_3 <= "14:00" && $kode_jadwal_last == "JD004") {
                     $tgl_presensi = $lastday;
                     $tgl_pulang = date('Y-m-d', strtotime('+1 day', strtotime($tgl_presensi)));
                     $jam_pulang = $tgl_pulang . " 07:00";
@@ -243,7 +243,7 @@ class PresensiController extends Controller
 
                     if ($kode_jadwal == "JD004") {
                         if ($hariini != "Sabtu") {
-                            if ($jam_sekarang > "00:00" && $jam_sekarang <= "08:00") {
+                            if ($jam_sekarang > "00:00" && $jam_sekarang <= "14:00") {
                                 $tgl_pulang = $tgl_presensi;
                             } else {
                                 $tgl_pulang = date('Y-m-d', strtotime('+1 day', strtotime($tgl_presensi)));
