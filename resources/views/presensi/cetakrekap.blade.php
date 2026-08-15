@@ -40,15 +40,15 @@
 
         .tabelpresensi tr th {
             border: 1px solid #131212;
-            padding: 8px;
+            padding: 3px;
             background-color: #dbdbdb;
-            font-size: 10px
+            font-size: 7px;
         }
 
         .tabelpresensi tr td {
             border: 1px solid #131212;
-            padding: 5px;
-            font-size: 12px;
+            padding: 2px;
+            font-size: 7px;
         }
 
         .foto {
@@ -176,9 +176,9 @@
                     }
                 ?>
 
-                <td>
-                    <span style="color:{{ $hadir[0]>"07:00:00" ? "red" : "" }}">{{ $hadir[0] }}</span><br>
-                    <span style="color:{{ $hadir[1]<"16:00:00" ? "red" : "" }}">{{ $hadir[1] }}</span>
+                <td style="text-align: center;">
+                    <span style="color:{{ $hadir[0]>"07:00:00" ? "red" : "" }}">{{ !empty($hadir[0]) ? date("H:i", strtotime($hadir[0])) : "" }}</span><br>
+                    <span style="color:{{ $hadir[1]<"16:00:00" ? "red" : "" }}">{{ !empty($hadir[1]) ? date("H:i", strtotime($hadir[1])) : "" }}</span>
                 </td>
 
                 <?php
