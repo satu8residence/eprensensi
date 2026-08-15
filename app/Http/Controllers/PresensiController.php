@@ -1044,6 +1044,7 @@ class PresensiController extends Controller
             ->whereRaw('MONTH(tgl_presensi)="' . $bulan . '"')
             ->whereRaw('YEAR(tgl_presensi)="' . $tahun . '"')
             ->groupByRaw('presensi.nik,nama_lengkap')
+            ->orderBy('nama_lengkap')
             ->get();
 
         $rekap_lembur = DB::table('hrd_lembur_detail')
