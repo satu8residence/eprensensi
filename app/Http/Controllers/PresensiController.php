@@ -1038,7 +1038,7 @@ class PresensiController extends Controller
                 MAX(IF(DAY(tgl_presensi) = 28,CONCAT(jam_in,"-",IFNULL(jam_out,"00:00:00"),"-",IFNULL(jam_masuk,"07:00:00"),"-",IFNULL(jam_pulang,"17:00:00")),"")) as tgl_28,
                 MAX(IF(DAY(tgl_presensi) = 29,CONCAT(jam_in,"-",IFNULL(jam_out,"00:00:00"),"-",IFNULL(jam_masuk,"07:00:00"),"-",IFNULL(jam_pulang,"17:00:00")),"")) as tgl_29,
                 MAX(IF(DAY(tgl_presensi) = 30,CONCAT(jam_in,"-",IFNULL(jam_out,"00:00:00"),"-",IFNULL(jam_masuk,"07:00:00"),"-",IFNULL(jam_pulang,"17:00:00")),"")) as tgl_30,
-                MAX(IF(DAY(tgl_presensi) = 31,CONCAT(jam_in,"-",IFNULL(jam_out,"00:00:00"),"-",IFNULL(jam_masuk,"07:00:00"),"-",IFNULL(jam_pulang,"17:00:00")),"")) as tgl_31\')
+                MAX(IF(DAY(tgl_presensi) = 31,CONCAT(jam_in,"-",IFNULL(jam_out,"00:00:00"),"-",IFNULL(jam_masuk,"07:00:00"),"-",IFNULL(jam_pulang,"17:00:00")),"")) as tgl_31')
             ->join('karyawan', 'presensi.nik', '=', 'karyawan.nik')
             ->leftJoin('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
             ->whereRaw('MONTH(tgl_presensi)="' . $bulan . '"')
