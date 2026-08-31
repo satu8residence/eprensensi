@@ -314,6 +314,30 @@ class PresensiController extends Controller
         $hariini = $this->hari_tanggal($tgl_presensi);
         $jadwal = $this->getJamKerjaKaryawan($nik, $tgl_presensi, $hariini);
 
+        // Jika tidak ada jadwal hari ini (misal: libur), cek apakah karyawan punya
+        // presensi lintas hari (shift malam) dari kemarin yang belum absen pulang.
+        // Jika ada, gunakan shift kemarin agar bisa absen pulang.
+        $is_lintashari_pulang = false;
+        if ($jadwal == null && $statuspresensi == 'pulang') {
+            $ceklastpresensi_lintashari = DB::table('presensi')
+                ->join('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
+                ->where('presensi.nik', $nik)
+                ->where('presensi.tgl_presensi', $lastday)
+                ->whereNotNull('presensi.jam_in')
+                ->whereNull('presensi.jam_out')
+                ->where('jam_kerja.lintashari', '1')
+                ->first();
+            if ($ceklastpresensi_lintashari != null) {
+                $is_lintashari_pulang = true;
+                $jadwal = (object) [
+                    'kode_jadwal'    => $ceklastpresensi_lintashari->kode_jadwal,
+                    'kode_jam_kerja' => $ceklastpresensi_lintashari->kode_jam_kerja,
+                    'hari'           => $hariini,
+                    'nama_jadwal'    => 'Lintas Hari',
+                ];
+            }
+        }
+
         if ($jadwal == null) {
             $jadwal = DB::table('jadwal_kerja_detail')
                 ->join('jadwal_kerja', 'jadwal_kerja_detail.kode_jadwal', '=', 'jadwal_kerja.kode_jadwal')
@@ -324,7 +348,7 @@ class PresensiController extends Controller
 
         $jam_kerja = DB::table('jam_kerja')->where('kode_jam_kerja', $jadwal->kode_jam_kerja)->first();
 
-        $lintashari  = $jam_kerja->lintashari;
+        $lintashari = $jam_kerja->lintashari;
 
 
         $jarak = $this->distance($latitudekantor, $longitudekantor, $latitudeuser, $longitudeuser);
