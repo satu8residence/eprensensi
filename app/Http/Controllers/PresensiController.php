@@ -217,6 +217,7 @@ class PresensiController extends Controller
                     'kode_jam_kerja' => $ceklastpresensi_create->kode_jam_kerja,
                     'hari'           => $hariini_nama,
                     'nama_jadwal'    => 'Lintas Hari',
+                    'kode_cabang'    => Auth::guard('karyawan')->user()->kode_cabang ?? 'PST',
                 ];
             }
         }
@@ -344,6 +345,7 @@ class PresensiController extends Controller
                     'kode_jam_kerja' => $ceklastpresensi_lintashari->kode_jam_kerja,
                     'hari'           => $hariini,
                     'nama_jadwal'    => 'Lintas Hari',
+                    'kode_cabang'    => Auth::guard('karyawan')->user()->kode_cabang ?? 'PST',
                 ];
             }
         }
