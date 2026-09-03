@@ -197,8 +197,32 @@ class PresensiController extends Controller
         $hariini_nama = $this->hari_ini();
         $jadwal = $this->getJamKerjaKaryawan($nik, $hariini, $hariini_nama);
 
+        // Jika tidak ada jadwal hari ini, cek apakah ada presensi lintas hari kemarin
+        // yang belum absen pulang. Jika ada, izinkan karyawan absen pulang.
+        if ($jadwal == null || empty($jadwal->kode_jam_kerja)) {
+            $lastday_create = date('Y-m-d', strtotime('-1 day', strtotime($hariini)));
+            $ceklastpresensi_create = DB::table('presensi')
+                ->join('jam_kerja', 'presensi.kode_jam_kerja', '=', 'jam_kerja.kode_jam_kerja')
+                ->where('presensi.nik', $nik)
+                ->where('presensi.tgl_presensi', $lastday_create)
+                ->whereNotNull('presensi.jam_in')
+                ->whereNull('presensi.jam_out')
+                ->where('jam_kerja.lintashari', '1')
+                ->first();
+
+            if ($ceklastpresensi_create != null) {
+                // Ada shift lintas hari kemarin yang belum pulang, gunakan shift kemarin
+                $jadwal = (object) [
+                    'kode_jadwal'    => $ceklastpresensi_create->kode_jadwal,
+                    'kode_jam_kerja' => $ceklastpresensi_create->kode_jam_kerja,
+                    'hari'           => $hariini_nama,
+                    'nama_jadwal'    => 'Lintas Hari',
+                ];
+            }
+        }
+
         //Jika Belum Memiliki Jadwal
-        if ($jadwal == null && empty($cekminggumasuk)) {
+        if (($jadwal == null || empty($jadwal->kode_jam_kerja)) && empty($cekminggumasuk)) {
             return view('presensi.notifjadwal');
         }
 
@@ -206,20 +230,6 @@ class PresensiController extends Controller
 
         $kode_dept =  Auth::guard('karyawan')->user()->kode_dept;
         $kode_cabang =  Auth::guard('karyawan')->user()->kode_cabang;
-
-        // if ($cekliburhariini != null && $jabatan->nama_jabatan != "SECURITY") {
-        //     return view('presensi.libur', compact('cekliburhariini'));
-        // } else if ($cekwfhhariini != null) {
-        //     return view('presensi.wfh', compact('cekwfhhariini'));
-        // } elseif ($cekliburpenggantiminggu != null) {
-        //     return view('presensi.liburpenggantiminggu', compact('cekliburpenggantiminggu'));
-        // } else {
-        //     if ($kode_dept == "MKT" || $id_kantor != "PST" || $kode_dept == "ADT") {
-        //         return view('presensi.create_with_camera', compact('cek', 'lok_kantor', 'jam_kerja', 'jadwal'));
-        //     } else {
-        //         return view('presensi.create', compact('cek', 'lok_kantor', 'jam_kerja', 'jadwal'));
-        //     }
-        // }
 
         if ($kode_dept == "MKT" || $kode_cabang != "PST" || $kode_dept == "ADT") {
             return view('presensi.create_with_camera', compact('cek', 'lok_kantor', 'jam_kerja', 'jadwal'));
